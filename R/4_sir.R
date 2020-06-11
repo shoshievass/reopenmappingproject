@@ -1,35 +1,18 @@
 ##############################################################################
 ##############################################################################
 ######                                                                  ######
-######                 COVID Project SIR                                ######
+######            reopen mapping project -- run SEIR                    ######
 ######                                                                  ######
 ##############################################################################
 ##############################################################################
 
 
 
-rm(list = ls())
-dir<-Sys.getenv("HOME")
-
-if (dir=="/Users/hanyang") {
-  proj <- paste(dir, "Dropbox", "COVID Project", sep="/")
-  dataPath <- paste(proj, "stata", "data", sep="/")
-  codePath <- paste(proj, "R", sep="/")
-  outPath  <- paste(proj, "R", "output", sep="/")
-} 
-setwd(dataPath)
-
-## set up global varibales and functions
-source(paste(codePath,"002_programs.R"  ,sep='/'))
-source(paste(codePath,"001_config.R"  ,sep='/'))
-
 #####################################
 # set up
 #####################################
 
 
-baserun<-"_socialdistance"
-# baserun<-"_XXX"
 vpar<-vparameters0
 
 #####################################
@@ -40,8 +23,9 @@ start_time <- Sys.time()
 # foreach place
 for (p in placeList){
   place  <-p
-  # calibrated parameters for this location
+  # load calibrated parameters for this location
   par<-calibratedPar(place)
+  
   # initial condition
   initNumIperType<<-par$I0
   
@@ -53,35 +37,35 @@ for (p in placeList){
     # for each phase
     for (j in 1:3){
       contact <- as.vector(policyCombo[i,j])
-      ### contact matrix from synthetic population
+      # load contact matrix from synthetic population
       Cmat<<-loadData(place, contact)
        
+      # load inputed parameters
       vpar<-vparameters0
-      if (j>1){
-        vpar["beta"]<-par$beta2
-      }else{
-        vpar["beta"]<-par$beta
-      }
-      
-      #fix beta to be the same
+
+      #transmission rate
       if (fixBETA==1){
+        #fix at initial (high) level
         vpar["beta"]<-par$beta
       }else if (fixBETA==2){
+        #fix at reduced level
         vpar["beta"]<-par$beta2        
+      }else{
+        # consider reduced transmission rate in phase 2 and 3
+        vpar["beta"]<-ifelse(j>1,par$beta2,par$beta)
       }
       
       ### initial condition
-      inits<-initialCondition2(nc,N,TTT[j],sim0)
+      inits<-initialCondition(nc,N,TTT[j],sim0)
       vt <- seq(0,diff(TTT)[j],1) 
       
       #run SIR
       sim_j = as.data.frame(lsoda(inits, vt, SEIIRRD_model, vpar))
       
-      # add naics specific tag for opening sector
-      sim_j <- tagOpenNaics(sim_j,contact,place)
+      # add naics specific tag to keep track of opening sector
+      sim_j <- tagOpenNaics(sim_j,contact)
       # add age specific tag for whether people in this age bin can work
       sim_j <- tagOpenAge(sim_j,contact)
-      
       
       #aggregate results
       if (j>1){
@@ -96,23 +80,17 @@ for (p in placeList){
     
       # organize outputs across three phasess
       if (j==3){
-        # save model results and produce plots
-        fn<-paste(policyCombo[i,1],policyCombo[i,2],policyCombo[i,3],sep="")
-        if (saveSIR==1){
-          save(sim0, file = paste(outPath, "model", paste("ode_", place, fn, ver, ".rda", sep=""), sep="/"))
-          print("  saved results")
-        }
+        pcombo<-paste(policyCombo[i,1],policyCombo[i,2],policyCombo[i,3],sep="")
+        print(pcombo)
         # generate plot/csv outputs
-        if (outpSIR==1){
-          exportSIR(sim0,place,contact,fn)
-          # packagePlot2(sim0,place,fn,NA)
-          
+        if (outputSIR==1){
+          exportSIR(sim0,place,contact,pcombo)
           if (i==1){
-            #first is reference
+            #first run is reference
             sim2<-sim0
-            packagePlot2(sim0,place,fn,NA)
+            packagePlot(sim0,place,pcombo,NA)
           }else{
-            packagePlot2(sim0,place,fn,sim2)
+            packagePlot(sim0,place,pcombo,sim2)
           }
         }else{
           # plot SIR output, not save
@@ -129,9 +107,3 @@ for (p in placeList){
 
 end_time <- Sys.time()
 print(end_time - start_time)
-
-
-
-# copy for matteo:
-# cd '/Users/hanyang/Dropbox/COVID Project/R/output/csv'
-# cp sir_*_5600_*_combo.csv ../../../Employmentv2/rawdata/SIR/

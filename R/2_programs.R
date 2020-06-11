@@ -1,7 +1,7 @@
 ##############################################################################
 ##############################################################################
 ######                                                                  ######
-######                 COVID Project Functions                          ######
+######        reopen mapping project -- functions                      ######
 ######                                                                  ######
 ##############################################################################
 ##############################################################################
@@ -42,8 +42,6 @@ SEIIRRD_model=function(t, x, vparameters){
     #mortality rate for symptomatic/asymptomatic
     mortV    = DELTAhc[ageSickVec]
     recvV    = GAMMA[ageSickVec]
-    #mortVa  = DELTAa[ageSickVec]
-    psiV     = PSI[ageSickVec]
     tauV     = TAU[ageSickVec]
     epsilonV = EPSILON[ageSickVec]
     
@@ -54,15 +52,14 @@ SEIIRRD_model=function(t, x, vparameters){
     dS   = -as.matrix(S*beta*scalBETA)*(as.matrix(Cmat)%*%as.matrix((Ia+Ins)/N)) - as.matrix(S*betaH)*healthNeed*healthVec
     dE   = -epsilonV*as.matrix(E) -dS 
     dIa  = +epsilonV*as.matrix(E) -tauV*as.matrix(Ia)                              
-    dIns =                        +tauV*as.matrix(Ia)*(1-psiV) -gamma*as.matrix(Ins)  
-    dIhc =                        +tauV*as.matrix(Ia)*psiV     -recvV*as.matrix(Ihc) -mortV*as.matrix(Ihc)
+    dIns =                        +tauV*as.matrix(Ia)*(1-psi) -gamma*as.matrix(Ins)  
+    dIhc =                        +tauV*as.matrix(Ia)*psi     -recvV*as.matrix(Ihc) -mortV*as.matrix(Ihc)
     dRq  = +recvV*as.matrix(Ihc)   -eta*as.matrix(Rq)
     dRqd =                         +eta*as.matrix(Rq)
     dRnq = +gamma*as.matrix(Ins) 
     dD   = +mortV*as.matrix(Ihc)
     
-    # remember that you have to have the output in the same order as the model
-    # compartments are at the beginning of the function
+    # output in the same order as the model compartments are at the beginning of the function
     out=c(dS,dE,dIa,dIns,dIhc,dRq,dRqd,dRnq,dD)
     list(out)
   })
@@ -70,9 +67,8 @@ SEIIRRD_model=function(t, x, vparameters){
 
 
 # initial condition based on other model otuput -----------------------------------------------------
-initialCondition2 <- function(nc,N,fromT,sim0) {
-  
-  # use results from referece scenario
+initialCondition <- function(nc,N,fromT,sim0) {
+  #set up initial conditions 
   if (fromT==0){
     # set a constant infection fraction in each type
     Ia_0   <- pmin(N,rep(initNumIperType,nc))
@@ -85,6 +81,8 @@ initialCondition2 <- function(nc,N,fromT,sim0) {
     Rnq_0  <- rep(0,nc)
     D_0    <- rep(0,nc)
   }else{
+    # use results from previously run scenario
+    
     #start from initT
     iniT<-fromT
     
@@ -112,6 +110,7 @@ initialCondition2 <- function(nc,N,fromT,sim0) {
 
 
 # calibrated parameters  -----------------------------------------------------
+# store previously calibrated parameters
 calibratedPar <- function(place) {
   if (place=="5600"){
     I0<-2.95
@@ -160,27 +159,35 @@ calibratedPar <- function(place) {
 
 # load contact matrix data -----------------------------------------------------
 loadData <- function(place,contact) {
-  CData <-read.csv(paste("C2_msa", place, contact, datv,".csv",sep=""),header=TRUE)
+  
+  fn <- paste("C2_msa", place, contact, datv,".csv",sep="")
+  
+  # check input file exist
+  if (max(list.files()==fn)==0){
+    stop(paste("missing contact matrix: ", fn, sep=""))
+  }
+  
+  # load files
+  CData <-read.csv(fn, header=TRUE)
+  
+  ## define some global variables of data dimensions and types
+  
   
   # number of classes, total population, contact matrix
-  nc  <<- dim(CData)[1]
-  pop <<- sum(CData$n)
-  scl <<- 100/pop
-  N   <<- CData$n
-  Cmat <- as.matrix(CData[,grepl("rate", colnames(CData))])
-  
+  nc   <<- dim(CData)[1]
+  pop  <<- sum(CData$n)
+  scl  <<- 100/pop
+  N    <<- CData$n
+  types<<-cbind(CData[,c("ego","naics","age","shift","sick")])
+
   #age X sick (age*10 + sick)
   ageSickVec <<-match(CData$age*10 + CData$sick, typeAgeSick)
-  
-  #age
-  ageVec <<- CData$age
-  
-  
-  # naics <-> ID
-  naicsID<<-CData[,c("ego","naics")]
-  
+
   #healthcare worker
   healthVec <<-CData$naics==62
+  
+  #contact matrix
+  Cmat <- as.matrix(CData[,grepl("rate", colnames(CData))])
   
   return(Cmat=Cmat)
 }
@@ -197,11 +204,7 @@ loadData <- function(place,contact) {
 # indicate whether the naics is open  -----------------------------------------------------
 tagOpenNaics <- function(sim1,contact,place) {
   # load industry policy configuration
-  if (is.na(place)){
-    naicsPolicy <-read.csv(paste("naics2essentialpolicy.csv",sep=""),header=TRUE)
-  }else{
-    naicsPolicy <-read.csv(paste("msa",place,"_naics2essentialpolicy.csv",sep=""),header=TRUE)
-  }
+  naicsPolicy <-read.csv(paste(parmPath,"naics2essentialpolicy.csv",sep="/"),header=TRUE)
   policy <- gsub("_","", contact)
   
   # add open status to sim1
@@ -218,7 +221,7 @@ tagOpenAge <- function(sim1,contact) {
   policy <- gsub("_","", contact)
   
   # add age open status to sim1
-  for (i in unique(ageVec)){
+  for (i in unique(types$age)){
     # in the isolate 60+ policy, people 60+ cannot work
     sim1[[paste("age",i,sep="")]]<-ifelse(policy=="shutold" && i>=4,0,1)
   }
@@ -368,7 +371,7 @@ plotIbyNaics <- function(sim1) {
   
   # foreach industry
   for(i in 1:length(naics2plot)){
-    ni<-which(naicsID$naics==naics2plot[i])
+    ni<-which(types$naics==naics2plot[i])
     #initial population
     popi<-sum(N[ni])
     #fraction infected
@@ -390,7 +393,7 @@ plotIbyNaics <- function(sim1) {
 
 
 # export SIR outputs by each type  -----------------------------------------------------
-exportSIR <- function(sim1,place,contact,contact3) {
+exportSIR <- function(sim1,place,contact,pcombo) {
   
   #colnames 
   coln<-colnames(sim1)
@@ -398,34 +401,28 @@ exportSIR <- function(sim1,place,contact,contact3) {
   #time periods
   TT<-dim(sim1)[1]
   
-  #get dimension from data
-  CData <-read.csv(paste("C2_msa", place, contact, datv,".csv",sep=""),header=TRUE)
-  
-  #number of types
-  n <- dim(CData)[1]
-
   #types and placeholder for SIR output
-  out<-cbind(CData[,c("ego","naics","age","shift","sick")])
+  out<-types
   
   #types
-  ego<-CData$ego
-  naics<-CData$naics
+  ego  <-types$ego
+  naics<-types$naics
   
   # foreach outputs
   compartList    <-c(COMPART, "naics")
   nj<-length(compartList)
   for(j in 1:nj){
     
-    outj<-matrix(0,n,TT)   
+    outj<-matrix(0,nc,TT)   
     
     # foreach type
-    for(i in 1:n){
+    for(i in 1:nc){
       #select output in this NAICS
       if (j==nj){
         x<-sim1[[paste("naics",naics[i],sep="")]]
         # some age bins are not working
         if (naics[i] %in% ESSENTIAL==FALSE){
-          x<-pmin(x, sim1[[paste("age",ageVec[i],sep="")]])
+          x<-pmin(x, sim1[[paste("age",types$age[i],sep="")]])
         }
       }else{
         x<-sim1[[paste(compartList[j],ego[i],sep="")]]
@@ -436,7 +433,7 @@ exportSIR <- function(sim1,place,contact,contact3) {
     #export csv
     fn <- paste(outPath, "csv", 
                 paste("sir_", compartList[j], "_" ,
-                      place, contact3, ver, ".csv", sep=""), sep="/")
+                      place, pcombo, ver, ".csv", sep=""), sep="/")
     write.table(cbind(out,outj), file=fn,sep=",",col.names=FALSE,row.names=FALSE)
     print(paste("  export output:",fn))
   }
@@ -445,30 +442,7 @@ exportSIR <- function(sim1,place,contact,contact3) {
 
 
 # plot SIR across senarios -----------------------------------------------------
-packagePlot <- function(sim1,sim2) {
-  
-  ### produce plots
-  fn <- paste('SIR_dcm_', place, contact, ver, ".pdf", sep="")
-  pdf(paste(outPath, "figure", fn, sep="/"))
-  plotSIR(sim1,sim2)
-  dev.off()
-  print(paste("  ...saved",fn))
-  
-  fn <- paste('SIR2_dcm_', place, contact, ver, ".pdf", sep="")
-  pdf(paste(outPath, "figure", fn, sep="/"))
-  plotSIRHealth(sim1,sim2)
-  dev.off()
-  print(paste("  ...saved",fn))
-  
-  fn <- paste('Infected_naics_dcm_', place, contact, ver, ".pdf", sep="")
-  pdf(paste(outPath, "figure", fn, sep="/"))
-  plotIbyNaics(sim1)
-  dev.off()
-  print(paste("  ...saved",fn))
-}
-
-# plot SIR across senarios -----------------------------------------------------
-packagePlot2 <- function(sim1,place,contact, sim2) {
+packagePlot <- function(sim1,place,contact, sim2) {
   
   ### produce plots
   fn <- paste('SIR_dcm_', place, contact, ver, ".png", sep="")
@@ -489,40 +463,6 @@ packagePlot2 <- function(sim1,place,contact, sim2) {
   dev.off()
   print(paste("  ...saved",fn))
 }
-
-
-
-
-# load data and SIR results, then produce plots and save results -----------------------------
-loadResult4Plot <- function(place,contact) {
-  
-  ## load data for dimensions
-  loadData(place, contact)
-  
-  ## load primary simulation result
-  load(paste(outPath, "model", paste("ode_", place, contact, rver, ".rda", sep=""), sep="/"))
-  simbase<-sim1
-  
-  ## load secondary results as comparison for different policy scenarios
-  sim2<-NA
-  if (OPENT==0){
-    if (contact!="_regular" & contact!="_socialdistance"){
-      load(paste(outPath, "model", paste("ode_", place, "_socialdistance", rver, ".rda", sep=""), sep="/"))
-      sim2<-sim1
-    }
-  }
-  else{
-    if (contact!="_regular"){
-      load(paste(outPath, "model", paste("ode_", place, "_regular", rver, ".rda", sep=""), sep="/"))
-      sim2<-sim1
-    }
-  }
-  
-  ### produce plots
-  packagePlot(simbase,sim2)
-}
-
-
 
 
 
