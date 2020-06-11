@@ -105,22 +105,13 @@ TTT <<-c(0,15,75,150)
 # NYC, Chicago, Sacramento
 # msa  "5600", "1600", "6920"
 placeList<-c("5600", "1600", "6920")
-placeList<-c("1600")
+placeList<-c("5600")
 
 #####################################
 # Versions
 #####################################
 
-# ver<<-"_combo"
-# ver<<-"_comboReplica"
-ver<<-"_comboReplicav0"
-
-# ver<<-"_comboReplicav0_beta0"
-# ver<<-"_comboReplicav0_beta1"
-# ver<<-"_comboReplicav0_beta09"
-# ver<<-"_comboReplicav0_beta075"
-# ver<<-"_comboReplicav0_beta05"
-# ver<<-"_comboReplicav0_beta025"
+ver<<-"_combo"
 
 
 # fix beta as counterfactual, 0 for varying beta, 1 for beta0 and 2 for beta1
@@ -164,7 +155,7 @@ initNumIperType<<-1
 
 
 #data version
-datv<<-"_replica"
+datv<<-"_fred"
 
 
 ### save results/plots?
