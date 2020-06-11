@@ -1,48 +1,23 @@
 ##############################################################################
 ##############################################################################
 ######                                                                  ######
-######                 COVID Project SIR                                ######
+######           reopen mapping project -- grid search                  ######
 ######                                                                  ######
 ##############################################################################
 ##############################################################################
-
-
-
-rm(list = ls())
-dir<-Sys.getenv("HOME")
-
-if (dir=="/Users/hanyang") {
-  proj <- paste(dir, "Dropbox", "COVID Project", sep="/")
-  dataPath <- paste(proj, "stata", "data", sep="/")
-  codePath <- paste(proj, "R", sep="/")
-  outPath  <- paste(proj, "R", "output", sep="/")
-} 
-setwd(dataPath)
-
-## set up global varibales and functions
-source(paste(codePath,"002_programs.R"  ,sep='/'))
-source(paste(codePath,"001_config.R"  ,sep='/'))
 
 
 #####################################
 # Grid Search
 #####################################
 
-
-
-
 rangeToT<-60
-
 place<-"5600"
-
 
 ### load covid death and cases data
 COVID <-read.csv("covid_case_death_jh.csv",header=TRUE)
 covid<-COVID[COVID$msa==place,c("t","deathper100k","caseper100k")]
 nt<-dim(covid)[1]
-
-
-
 
 ### regular parameters
 
