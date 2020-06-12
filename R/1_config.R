@@ -10,13 +10,14 @@
 #####################################
 ## check pakges
 #####################################
-packages <- c("deSolve")
+packages <- c("deSolve","plyr","dplyr","tidyr")
 newPackages <- packages[!(packages %in% installed.packages()[,"Package"])]
 if(length(newPackages)) install.packages(newPackages)
 
 library(deSolve)
-
-
+library(plyr)
+library(dplyr)
+library(tidyr)
 
 #####################################
 ## check files
@@ -84,16 +85,13 @@ psize<<-1.25
 ### scenarios/place
 
 ## all scenarios
-contactList<<-c("_regular","_socialdistance","_alternateschoolwork","_shutold", "_wfhreopenschool","_cautious")
+policyList<<-c("_NP","_EO","_AS","_I60", "_WFH","_CR")
 
 ## reference policies
-refPolicy   <-expand.grid(c("_regular"),c("_socialdistance"),c("_cautious"))
+refPolicy   <-expand.grid(c("_NP"),c("_EO"),c("_CR"))
 
 ## combinations
-policyFull <- expand.grid(c("_regular"),contactList,contactList)
-
-
-policyFull <- expand.grid(c("_regular"),c("_socialdistance"),contactList)
+policyFull <- expand.grid(c("_NP"),c("_EO"),policyList)
 
 
 policyCombo<<-rbind(refPolicy)
@@ -104,8 +102,8 @@ TTT <<-c(0,15,75,150)
 ## locations
 # NYC, Chicago, Sacramento
 # msa  "5600", "1600", "6920"
-placeList<-c("5600", "1600", "6920")
-placeList<-c("5600")
+msaList<<-c("5600", "1600", "6920")
+msaList<<-c("5600")
 
 #####################################
 # Versions
@@ -155,8 +153,10 @@ initNumIperType<<-1
 
 
 #data version
-datv<<-"_fred"
+datv<<-""
 
+#contact matrix version
+CmatVer<<-""
 
 ### save results/plots?
 outputSIR<<-1

@@ -193,7 +193,13 @@ loadData <- function(place,contact) {
 }
 
 
-
+# check if file exist and load  -----------------------------------------------------
+checkLoad <- function(fn) {
+  if (max(list.files()==fn)==0){
+    stop(paste("missing input data file : ", fn, sep=""))
+  }
+  return(read.csv(fn, header=TRUE))
+}
 
 
 #####################################

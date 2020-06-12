@@ -21,8 +21,8 @@ vpar<-vparameters0
 start_time <- Sys.time()
 
 # foreach place
-for (p in placeList){
-  place  <-p
+for (m in msaList){
+  place  <-m
   # load calibrated parameters for this location
   par<-calibratedPar(place)
   
