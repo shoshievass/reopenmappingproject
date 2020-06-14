@@ -29,11 +29,8 @@ library(tidyr)
 # data for fitting death
 deathData <<- "covid_case_death_jh.csv"
 
-# industry open/close definition in each policy
-indPlData <<- "naics2essentialpolicy.csv"
-
 # SEIR model parameters
-seirParm <<- "params.csv"
+seirParm  <<- "params.csv"
 
 # contact matrix file names start with
 ctMatData <<- "C_msa"
@@ -48,34 +45,11 @@ if (max(list.files()==seirParm)==0){
   stop(paste("missing input parameters files: ", parmPath, seirParm, sep="/"))
 }
 
-## industry reopen status under each policies
-if (max(list.files()==indPlData)==0){
-  stop(paste("missing industry open status files: ", parmPath, indPlData, sep="/"))
-}
-
 ## death counts used for calibration
 setwd(dataPath)
 if (max(list.files()==deathData)==0){
   stop(paste("missing deaths count from Johns Hopkins: ", parmPath, deathData, sep="/"))
 }
-
-
-
-
-#####################################
-### hardcode global variables
-#####################################
-
-#industry to plot
-naics2plot<<-c(31,42,44,52,54,62,72)
-naicsName<<-c("Manufacturing*","Wholesale*","Retail","Finance","Professional & IT","Healthcare*","Accommodation")
-
-#essential naics2
-ESSENTIAL<<-c(11,21,22,31,42,48,62,92)
-
-#compartments
-COMPART   <<-c("S","E","Ia","Ins","Ihc","Rq","Rqd","Rnq","D")
-
 
 
 #####################################
@@ -93,7 +67,7 @@ refPolicy   <-expand.grid(c("_NP"),c("_EO"),c("_CR"))
 policyFull <- expand.grid(c("_NP"),c("_EO"),policyList)
 
 
-policyCombo<<-rbind(refPolicy)
+policyCombo<<-rbind(policyFull)
 
 ## time period of each phases with different policies
 TTT <<-c(0,15,75,150)
@@ -103,18 +77,19 @@ TTT <<-c(0,15,75,150)
 # msa  "5600", "1600", "6920"
 msaList<<-c("5600")
 
+
 #####################################
-# Versions
+# input/output versions
 #####################################
 
 #output version
 ver<<-"_combo"
 
-#input (data/contact matrix/parameter) version
+#input (data,contact matrix) version
 datv<<-""
 
 ### save results/plots?
-outputSIR<<-1
+outputSIR<<-0
 
 
 # fix beta as counterfactual, 0 for varying beta, 1 for beta1 and 2 for beta2
@@ -128,8 +103,12 @@ scalBETA<<-1
 
 
 #####################################
-# load SIR parameters
+# load and define SIR parameters
 #####################################
+#compartments
+COMPART   <<-c("S","E","Ia","Ins","Ihc","Rq","Rqd","Rnq","D")
+
+# load user defined SIR parameters
 PAR <-read.csv(paste(parmPath,seirParm,sep="/"),header=TRUE)
 
 #constant parameters
@@ -152,13 +131,22 @@ GAMMA   <<-gammaD - DELTAhc    # recovery rate to account for variation in death
 ## unique age X sick type: age*10 + sick
 typeAgeSick <<-as.matrix(PAR$age*10+PAR$sick)
 
-#wtd average duration of infected
+#wtd average duration of infected (not in the SIR model, a scaling factor in calibration exercise)
 infectDuration<<-min(PAR$infectionDuration)
 # infectDuration<<-psi * (1/mean(TAU)) + (1-psi) * (1/mean(TAU) + 1/gamma)
-
   
 # initial condition: number of people in I^A per type
 initNumIperType<<-1
+
+
+#####################################
+### global variables for plots
+#####################################
+
+#industry to plot
+naics2plot<<-c(31,42,44,52,54,62,72)
+naicsName<<-c("Manufacturing*","Wholesale*","Retail","Finance","Professional & IT","Healthcare*","Accommodation")
+
 
 # setting for plots
 gen_col()

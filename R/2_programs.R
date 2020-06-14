@@ -67,7 +67,11 @@ SEIIRRD_model=function(t, x, vparameters){
 
 
 # initial condition based on other model otuput -----------------------------------------------------
-initialCondition <- function(nc,N,fromT,sim0) {
+initialCondition <- function(fromT,sim0) {
+  #number of types and population
+  N <- types$n
+  nc<- length(N)
+  
   #set up initial conditions 
   if (fromT==0){
     # set a constant infection fraction in each type
@@ -146,15 +150,10 @@ loadData <- function(place,contact) {
   # load files
   CData <-read.csv(fn, header=TRUE)
   
-  ## define some global variables of data dimensions and types
+  ## define some global variables of types of agents
+  # types
+  types<<- cbind(CData[,c("ego","naics","age","shift","sick","active_emp","n")])
   
-  
-  # number of classes, total population, contact matrix
-  nc   <<- dim(CData)[1]
-  pop  <<- sum(CData$n)
-  N    <<- CData$n
-  types<<-cbind(CData[,c("ego","naics","age","shift","sick")])
-
   #age X sick (age*10 + sick)
   ageSickVec <<-match(CData$age*10 + CData$sick, typeAgeSick)
 
@@ -182,29 +181,11 @@ checkLoad <- function(fn) {
 #####################################
 
 
-# indicate whether the naics is open  -----------------------------------------------------
-tagOpenNaics <- function(sim1,contact,place) {
-  # load industry policy configuration
-  naicsPolicy <-read.csv(paste(parmPath,indPlData,sep="/"),header=TRUE)
-  policy <- gsub("_","", contact)
-  
+# indicate fraction of people in this type that are actively working  -----------------------------------------------------
+tagActiveEmp <- function(sim1) {
   # add open status to sim1
-  for (i in naicsPolicy$naics){
-    sim1[[paste("naics",i,sep="")]]<-naicsPolicy[[policy]][naicsPolicy$naics==i]
-  }
-  return(sim1)
-}  
-
-
-
-# indicate whether the age is allowed to go to workplace  ------------------------------------------------
-tagOpenAge <- function(sim1,contact) {
-  policy <- gsub("_","", contact)
-  
-  # add age open status to sim1
-  for (i in unique(types$age)){
-    # in the isolate 60+ policy, people 60+ cannot work
-    sim1[[paste("age",i,sep="")]]<-ifelse(policy=="shutold" && i>=4,0,1)
+  for (i in 1:length(types$ego)){
+    sim1[[paste("active",i,sep="")]]<-types$active_emp[i]
   }
   return(sim1)
 }  
@@ -231,7 +212,7 @@ pickState <- function(stateLetter,coln) {
 # extract the time series of one state according to regular expression (aggregate across all classes) ---------------
 extractState <- function(stateLetter,simRun) {
   coln <- colnames(simRun)
-  return((100/pop)*rowSumMat(simRun[,pickState(stateLetter,coln)]))
+  return((100/sum(types$n))*rowSumMat(simRun[,pickState(stateLetter,coln)]))
 }
 
 # extract the time series of several state according to regular expression (aggregate across all classes) ---------------
@@ -239,7 +220,7 @@ extractSeveralState <- function(stateLetterList,simRun) {
   coln <- colnames(simRun)
   s<-0
   for (i in 1:length(stateLetterList)){
-    s<-s+(100/pop)*rowSumMat(simRun[,pickState(stateLetterList[i],coln)])
+    s<-s+(100/sum(types$n))*rowSumMat(simRun[,pickState(stateLetterList[i],coln)])
   }
   return(s)
 }
@@ -354,7 +335,7 @@ plotIbyNaics <- function(sim1) {
   for(i in 1:length(naics2plot)){
     ni<-which(types$naics==naics2plot[i])
     #initial population
-    popi<-sum(N[ni])
+    popi<-sum(types$n[ni])
     #fraction infected
     I <- (100/popi) * (
         rowSumMat(sim1[,coln %in% paste("Ia" ,ni,sep="")]) +
@@ -383,41 +364,34 @@ exportSIR <- function(sim1,place,contact,pcombo) {
   TT<-dim(sim1)[1]
   
   #types and placeholder for SIR output
-  out<-types
+  out<-types[,!(colnames(types) %in% c("active_emp"))]
   
   #types
   ego  <-types$ego
-  naics<-types$naics
+  
+  #number of types
+  nc<-length(ego)
   
   # foreach outputs
-  compartList    <-c(COMPART, "naics")
+  compartList    <-c(COMPART, "active")
   nj<-length(compartList)
   for(j in 1:nj){
     
     outj<-matrix(0,nc,TT)   
     
-    # foreach type
+    # foreach type, record SIR output at each T
     for(i in 1:nc){
-      #select output in this NAICS
-      if (j==nj){
-        x<-sim1[[paste("naics",naics[i],sep="")]]
-        # some age bins are not working
-        if (naics[i] %in% ESSENTIAL==FALSE){
-          x<-pmin(x, sim1[[paste("age",types$age[i],sep="")]])
-        }
-      }else{
-        x<-sim1[[paste(compartList[j],ego[i],sep="")]]
-      }
+      x<-sim1[[paste(compartList[j],ego[i],sep="")]]
       #record outputs
       outj[i,] <- x
     }
+    colnames(outj)<-paste("T",c(0:(TT-1)),sep="")
     
-    
-    #export csv
+    # export csv
     fn <- paste(outPath, "csv", 
                 paste("sir_", compartList[j], "_" ,
                       place, pcombo, ver, ".csv", sep=""), sep="/")
-    write.table(cbind(out,outj), file=fn,sep=",",col.names=FALSE,row.names=FALSE)
+    write.table(cbind(out,outj), file=fn,sep=",",col.names=TRUE,row.names=FALSE)
     print(paste("  export output:",fn))
   }
 }
