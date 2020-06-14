@@ -115,7 +115,7 @@ grid_search <- function(place, covid, rangeToT){
       ### for three periods phase 0-old beta, phase 1-old beta, phase 1-new beta
       sim0<-NA
       for (t in 1:3){
-        inits<-initialCondition(nc,N,TTTcali[t],sim0)
+        inits<-initialCondition(TTTcali[t],sim0)
         vt <- seq(0,diff(TTTcali)[t],1) 
         
         if (t==1){

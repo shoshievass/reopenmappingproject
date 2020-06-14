@@ -9,7 +9,7 @@
 
 
 ### wraper function for running SIR under one policy combination 
-run_sir <- function(place, policy, par){
+run_sir <- function(place, policy, par, sim_ref){
   print(paste("!!.... policy combo", i, ":", 
               policy[[1]], policy[[2]], policy[[3]], "at place", place, "......!!"))
   
@@ -37,17 +37,15 @@ run_sir <- function(place, policy, par){
     
     
     ### initial condition
-    inits<-initialCondition(nc,N,TTT[j],sim0)
+    inits<-initialCondition(TTT[j],sim0)
     vt <- seq(0,diff(TTT)[j],1) 
     
     #run SIR
     sim_j = as.data.frame(lsoda(inits, vt, SEIIRRD_model, vpar))
     
-    # add naics specific tag to keep track of opening sector
-    sim_j <- tagOpenNaics(sim_j,contact)
-    # add age specific tag for whether people in this age bin can work
-    sim_j <- tagOpenAge(sim_j,contact)
-    
+    # add tag to keep track of which type is working
+    sim_j <- tagActiveEmp(sim_j)
+
     #aggregate results
     if (j>1){
       sim0<-rbind(sim0[1:TTT[j],], sim_j)
@@ -65,12 +63,7 @@ run_sir <- function(place, policy, par){
       # generate plot/csv outputs
       if (outputSIR==1){
         exportSIR(sim0,place,contact,pcombo)
-        if (i==1){
-          #first run is reference
-          packagePlot(sim0,place,pcombo,NA)
-        }else{
-          packagePlot(sim0,place,pcombo,sim2)
-        }
+        packagePlot(sim0,place,pcombo,sim_ref)
       }else{
         # plot SIR output, not save
         par(mfrow=c(2,2))
@@ -82,7 +75,9 @@ run_sir <- function(place, policy, par){
     }
   }
   
-  print(paste("cumulative deaths:", round(max(extractState("D",sim0)*pop/100))))
+  print(paste("cumulative deaths:", round(max(extractState("D",sim0)*sum(types$n)/100))))
+  
+  return(sim0)
 }
 
 
@@ -101,7 +96,11 @@ for (m in msaList){
   
   # for each policy combo
   for (i in 1:dim(policyCombo)[1]){
-    run_sir(m, as.vector(policyCombo[i,]), par)
+    if (i==1){
+      sim_ref<-run_sir(m, as.vector(policyCombo[i,]), par, NA)
+    }else{
+      run_sir(m, as.vector(policyCombo[i,]), par, sim_ref)
+    }
   }
 }
 rm(Cmat, par)
