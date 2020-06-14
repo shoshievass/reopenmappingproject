@@ -32,16 +32,15 @@ for (m in 1:length(msaList)){
   C <- merge(x = C, y = TYPE_i, by = c("age_i", "naics_i"), all = FALSE)
   C <- merge(x = C, y = TYPE_j, by = c("age_j", "naics_j"), all = FALSE)
   
+  rm(TYPE, TYPE_i, TYPE_j)
   
   #####################################
   ### policy definition
   #####################################
-  ##
   
   # type space for individual i and j
   Th<-C[,c("age_i","naics_i","sick_i","shift_i","wfh_i","essential_i",
            "age_j","naics_j","sick_j","shift_j","wfh_j","essential_j","contactlvl")]
-  
   
   # normal
   Th$NP<-1
@@ -122,9 +121,11 @@ for (m in 1:length(msaList)){
     
     #export csv
     fn <- paste(dataPath, 
-                paste("C_msa", msaList[m], "_" , policy, CmatVer, ".csv", sep=""), sep="/")
+                paste(ctMatData, msaList[m], "_", policy, datv, ".csv", sep=""), sep="/")
     write.table(Cmat2, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
-    print(paste("export contact matrix :",fn))
-  
+    print(paste("export contact matrix:",fn))
   }
+  
+  rm(C, Th, Cmat, Cmat2, Cp, policy)
 }
+
