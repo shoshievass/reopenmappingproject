@@ -112,45 +112,21 @@ initialCondition <- function(nc,N,fromT,sim0) {
 # calibrated parameters  -----------------------------------------------------
 # store previously calibrated parameters
 calibratedPar <- function(place) {
-  if (place=="5600"){
-    I0<-2.95
-    beta<-0.01695
-    
-    #FRED time-varying beta
-    I0<-2.435
-    beta<-0.01859
-    beta2<-0.00965
+  #load calibrated parameter file
+  setwd(parmPath)
+  fn <- paste(caliParm, place, datv, ".csv", sep="")
+  if (max(list.files()==fn)==0){
+    stop(paste("missing calibrated parameter file: ", fn, sep=""))
   }
-  if (place=="1600"){
-    #fred
-    I0<-0.52
-    beta<-0.01085
+  
+  # load files
+  pData <-read.csv(fn, header=TRUE)
+  setwd(dataPath)
+  
+  I0<-as.vector(min(pData$I0))
+  beta <-as.vector(min(pData$beta1))
+  beta2<-as.vector(min(pData$beta2))
 
-    #replica    
-    I0<-0.2
-    beta<-0.002817   
-    
-
-    #replica, time varying beta
-    I0<-0.1212
-    beta<-0.003354
-    beta2<-0.00155
-    
-  }
-  if (place=="6920"){
-    #fred
-    I0<-2.55
-    beta<-0.003302
-    
-    #replica
-    I0<-2.2
-    beta<-0.0007885
-    
-    #replica, time varying beta
-    I0<-1
-    beta<-0.001326
-    beta2<-0.0004029
-  }
   return(list(I0=I0,beta=beta,beta2=beta2))
 }
 
@@ -160,7 +136,7 @@ calibratedPar <- function(place) {
 # load contact matrix data -----------------------------------------------------
 loadData <- function(place,contact) {
   
-  fn <- paste("C2_msa", place, contact, datv,".csv",sep="")
+  fn <- paste(ctMatData, place, contact, datv,".csv",sep="")
   
   # check input file exist
   if (max(list.files()==fn)==0){
@@ -176,7 +152,6 @@ loadData <- function(place,contact) {
   # number of classes, total population, contact matrix
   nc   <<- dim(CData)[1]
   pop  <<- sum(CData$n)
-  scl  <<- 100/pop
   N    <<- CData$n
   types<<-cbind(CData[,c("ego","naics","age","shift","sick")])
 
@@ -210,7 +185,7 @@ checkLoad <- function(fn) {
 # indicate whether the naics is open  -----------------------------------------------------
 tagOpenNaics <- function(sim1,contact,place) {
   # load industry policy configuration
-  naicsPolicy <-read.csv(paste(parmPath,"naics2essentialpolicy.csv",sep="/"),header=TRUE)
+  naicsPolicy <-read.csv(paste(parmPath,indPlData,sep="/"),header=TRUE)
   policy <- gsub("_","", contact)
   
   # add open status to sim1
@@ -256,7 +231,7 @@ pickState <- function(stateLetter,coln) {
 # extract the time series of one state according to regular expression (aggregate across all classes) ---------------
 extractState <- function(stateLetter,simRun) {
   coln <- colnames(simRun)
-  return(scl*rowSumMat(simRun[,pickState(stateLetter,coln)]))
+  return((100/pop)*rowSumMat(simRun[,pickState(stateLetter,coln)]))
 }
 
 # extract the time series of several state according to regular expression (aggregate across all classes) ---------------
@@ -264,7 +239,7 @@ extractSeveralState <- function(stateLetterList,simRun) {
   coln <- colnames(simRun)
   s<-0
   for (i in 1:length(stateLetterList)){
-    s<-s+scl*rowSumMat(simRun[,pickState(stateLetterList[i],coln)])
+    s<-s+(100/pop)*rowSumMat(simRun[,pickState(stateLetterList[i],coln)])
   }
   return(s)
 }
@@ -436,6 +411,8 @@ exportSIR <- function(sim1,place,contact,pcombo) {
       #record outputs
       outj[i,] <- x
     }
+    
+    
     #export csv
     fn <- paste(outPath, "csv", 
                 paste("sir_", compartList[j], "_" ,
@@ -484,4 +461,25 @@ t_col <- function(color, percent = 50, name = NULL) {
                names = name)
   ## Save the color
   invisible(t.col)
+}
+
+# generate color scheme  -----------------------------------------------------
+gen_col <- function() {
+  ## set of colors
+  mycol <<- c(t_col("red",     perc = 0),
+              t_col("orange",  perc = 0),
+              t_col("yellow2", perc = 0),
+              t_col("green",   perc = 0),
+              t_col("dimgray", perc = 0),
+              t_col("blue",    perc = 0),
+              t_col("purple",  perc = 0),
+              t_col("red",     perc = 40),
+              t_col("orange",  perc = 40),
+              t_col("yellow2", perc = 40),
+              t_col("green",   perc = 40),
+              t_col("dimgray", perc = 40),
+              t_col("blue",    perc = 40),
+              t_col("purple",  perc = 40))
+  mycolLength<<-7
+  psize<<-1.25
 }
