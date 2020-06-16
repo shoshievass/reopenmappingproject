@@ -75,8 +75,8 @@ run_sir <- function(place, policy, par, sim_ref){
     }
   }
   
-  print(paste("cumulative deaths:", round(max(extractState("D",sim0)*sum(types$n)/100))))
-  
+  #check deaths and employment loss
+  calOutcome(sim0)
   return(sim0)
 }
 

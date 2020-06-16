@@ -96,13 +96,6 @@ for (m in msaList){
     # note we currently have two types shift (for alternating schedule) and wfh. 
     # They are the same but with different weight: shift_w and wfh_w
     # So we need to define weights conditional on policy
-    # if (policy=="WFH"){
-    #   w_i<-C$sick_w_i * C$wfh_w_i
-    #   w_j<-C$sick_w_j * C$wfh_w_j
-    # }else{
-    #   w_i<-C$sick_w_i * C$shift_w_i
-    #   w_j<-C$sick_w_j * C$shift_w_j    
-    # }
     if (policy=="AS"){
       w_i<-C$sick_w_i * C$shift_w_i
       w_j<-C$sick_w_j * C$shift_w_j
