@@ -91,7 +91,6 @@ datv<<-""
 ### save results/plots?
 outputSIR<<-0
 
-
 # fix beta as counterfactual, 0 for varying beta, 1 for beta1 and 2 for beta2
 fixBETA<<-0
 

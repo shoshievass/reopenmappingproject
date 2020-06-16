@@ -48,10 +48,8 @@ grid_search <- function(place, covid, rangeToT){
   if (place=="5600"){
     lb<-c(5, -1,  5)
     ub<-c(50,  2,  20)
-    
-    lb<-c(20,  0,  10)
-    ub<-c(40,  2,  20)
-    
+    # lb<-c(20,  0,  10)
+    # ub<-c(40,  2,  20)
     step1<-c(5, 1,  5)
     name  <-"NYC"
     TTTcali <-c(0,15,25,nt-1)
@@ -141,6 +139,7 @@ grid_search <- function(place, covid, rangeToT){
       
       #death (per 100k) in data
       fitDeath[i,]<-extractState("D",sim0)*1e3
+      fitCase[i,] <-extractSeveralState(c("Ihc","Rq","Rqd","D"),sim0)*1e3
       if ((i %% 10)==0){
         print(paste(i,"/",ng,
                     " beta1=",format(parm$beta1,digits=4),
@@ -154,6 +153,7 @@ grid_search <- function(place, covid, rangeToT){
     print(end_time - start_time)
     
     dead<-log(covid$deathper100k)
+    case<-log(covid$caseper100k)
     if (ng>1){
       ## fit log death, min squared loss
       err<-log(fitDeath) - matrix(1,ng,1)%*%dead
@@ -171,8 +171,11 @@ grid_search <- function(place, covid, rangeToT){
       
     ### plot comparison
     par(mfrow=c(1,1))
-    plot(covid$t, dead, type="l", lwd="2", col="red")
+    plot(covid$t, log(fitCase[gstar,]), type="l", ylim=c(-4,10))
+    lines(covid$t, case, type="l", lwd="2", col="blue")
+    lines(covid$t, dead, type="l", lwd="2", col="red")
     lines(covid$t, log(fitDeath[gstar,]),type="l")
+ 
     abline(v=TTTcali[2], col="gray")
     
     ## check within grid search boundary

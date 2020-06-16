@@ -180,7 +180,6 @@ checkLoad <- function(fn) {
 #### other helper functions 
 #####################################
 
-
 # indicate fraction of people in this type that are actively working  -----------------------------------------------------
 tagActiveEmp <- function(sim1) {
   # add open status to sim1
@@ -190,7 +189,6 @@ tagActiveEmp <- function(sim1) {
   return(sim1)
 }  
 
-
 ### compute largest eigen value from contact matrixs -----------------------------------------------------
 largestEigenvalue <- function(Cmat) {
   eig <- eigen(Cmat)
@@ -198,11 +196,11 @@ largestEigenvalue <- function(Cmat) {
   return(eig)
 }
 
-
 # make sure x has 2-dimension and then row sum  -----------------------------------------------------
 rowSumMat <- function(x) {
   return(rowSums(as.matrix(x)))
 }
+
 # choose desired state by letter (S,I,R,..) and return all classes -------------------
 pickState <- function(stateLetter,coln) {
   s<-paste(stateLetter, "[0-9]",sep="")
@@ -236,7 +234,33 @@ plotSeveralLines <- function(what2plot,colvec,simRun,ltype) {
 }
 
 
+# compute and print key health and employment outcome of interest---------
+calOutcome<-function(simRun){
+ 
+  #1. cumualtive deaths
+  scal <- sum(types$n)/100
+  print(paste("Deaths:", 
+              round(max(extractState("D",simRun)*scal))))
+  
 
+  #2. count employment less
+  coln <- colnames(simRun)
+  
+  ## includes compartment that are working
+  s<-simRun[,pickState("S",coln)]
+  for (i in c("E","Ia","Ins","Rqd","Rnq")){
+    s<-s+simRun[,pickState(i,coln)]
+  }
+  ## consider wether these individuals are actively working
+  active<-s * simRun[,pickState("active",coln)]
+  
+  ## compute total employment loss in days
+  t<-max(TTT)
+  empLoss <- sum(types$n[types$naics>0])*t - sum(active[2:(t+1),])
+  print(paste("Employment loss (1000days):", 
+              round(empLoss/1e3)))  
+  
+}
 
 
 
@@ -367,7 +391,7 @@ exportSIR <- function(sim1,place,contact,pcombo) {
   out<-types[,!(colnames(types) %in% c("active_emp"))]
   
   #types
-  ego  <-types$ego
+  ego<-types$ego
   
   #number of types
   nc<-length(ego)
