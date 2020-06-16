@@ -41,13 +41,13 @@ caliParm  <<- "calibrated_parm_msa"
 
 ## input parameters
 setwd(parmPath)
-if (max(list.files()==seirParm)==0){
+if (!file.exists(seirParm)){
   stop(paste("missing input parameters files: ", parmPath, seirParm, sep="/"))
 }
 
 ## death counts used for calibration
 setwd(dataPath)
-if (max(list.files()==deathData)==0){
+if (!file.exists(deathData)){
   stop(paste("missing deaths count from Johns Hopkins: ", parmPath, deathData, sep="/"))
 }
 
@@ -61,7 +61,7 @@ if (max(list.files()==deathData)==0){
 policyList<<-c("_NP","_EO","_AS","_I60","_WFH","_CR")
 
 ## reference policies
-refPolicy   <-expand.grid(c("_NP"),c("_EO"),c("_CR"))
+refPolicy   <-expand.grid(c("_NP"),c("_EO"),c("_NP"))
 
 ## combinations
 policyFull <- expand.grid(c("_NP"),c("_EO"),policyList)
@@ -75,7 +75,7 @@ TTT <<-c(0,15,75,150)
 ## locations
 # NYC, Chicago, Sacramento
 # msa  "5600", "1600", "6920"
-msaList<<-c("5600")
+msaList<<-c("5600","1600","6920")
 
 
 #####################################
