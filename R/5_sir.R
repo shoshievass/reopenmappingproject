@@ -10,8 +10,10 @@
 
 ### wraper function for running SIR under one policy combination 
 run_sir <- function(place, policy, par, sim_ref){
-  print(paste("!!.... policy combo", i, ":", 
+  print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+  print(paste("!! Running SIR for policy combo", i, ":", 
               policy[[1]], policy[[2]], policy[[3]], "at place", place, "......!!"))
+  print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   
   sim0<-NA
   # for each of three phases

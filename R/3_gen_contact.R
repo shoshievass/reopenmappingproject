@@ -11,15 +11,19 @@
 #### foreach MSA
 for (m in msaList){
   
+  print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+  print(paste("!! Generating contact for MSA", m))
+  print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   
   #####################################
   ### load data
   #####################################
   # load contact
-  C <-checkLoad(paste("contact_msa", m, datv, ".csv",sep=""))
+  fn <- paste(dataPath, paste("contact_msa", m, datv, ".csv",sep=""), sep="/")
+  C <-checkLoad(fn)
   
   # load types
-  TYPE <-checkLoad("msa_type.csv")
+  TYPE <-checkLoad(paste(dataPath, "msa_type.csv", sep="/"))
   TYPE<-TYPE[TYPE$msa==m,!(colnames(TYPE) %in% c("msaname"))]
   
   # types for individual i and j

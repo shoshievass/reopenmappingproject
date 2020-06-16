@@ -117,16 +117,10 @@ initialCondition <- function(fromT,sim0) {
 # store previously calibrated parameters
 calibratedPar <- function(place) {
   #load calibrated parameter file
-  setwd(parmPath)
-  fn <- paste(caliParm, place, datv, ".csv", sep="")
-  if (!file.exists(fn)){
-    stop(paste("missing calibrated parameter file: ", fn, sep=""))
-  }
+  fn <- paste(parmPath, paste(caliParm, place, datv, ".csv", sep=""), sep="/")
+  pData <-checkLoad(fn)
   
-  # load files
-  pData <-read.csv(fn, header=TRUE)
-  setwd(dataPath)
-  
+  ## extract parameters
   I0<-as.vector(min(pData$I0))
   beta <-as.vector(min(pData$beta1))
   beta2<-as.vector(min(pData$beta2))
@@ -140,15 +134,12 @@ calibratedPar <- function(place) {
 # load contact matrix data -----------------------------------------------------
 loadData <- function(place,contact) {
   
-  fn <- paste(ctMatData, place, contact, datv,".csv",sep="")
-  
-  # check input file exist
-  if (!file.exists(fn)){
-    stop(paste("missing contact matrix: ", fn, sep=""))
-  }
-  
   # load files
-  CData <-read.csv(fn, header=TRUE)
+  fn <- paste(dataPath, 
+              paste(ctMatData, place, contact, datv, ".csv", sep=""),
+              sep="/")
+  CData <-checkLoad(fn)
+
   
   ## define some global variables of types of agents
   # types
@@ -170,7 +161,7 @@ loadData <- function(place,contact) {
 # check if file exist and load  -----------------------------------------------------
 checkLoad <- function(fn) {
   if (!file.exists(fn)){
-    stop(paste("missing input data file : ", fn, sep=""))
+    stop(paste("missing input file : ", fn, sep=""))
   }
   return(read.csv(fn, header=TRUE))
 }
@@ -179,6 +170,14 @@ checkLoad <- function(fn) {
 #####################################
 #### other helper functions 
 #####################################
+
+# get code directory  -----------------------------------------------------
+getCodePath <- function(filename){
+  out <- paste(codePath,filename,sep='/')
+  return(out)
+}
+
+
 
 # indicate fraction of people in this type that are actively working  -----------------------------------------------------
 tagActiveEmp <- function(sim1) {
@@ -239,8 +238,8 @@ calOutcome<-function(simRun){
  
   #1. cumualtive deaths
   scal <- sum(types$n)/100
-  print(paste("Deaths:", 
-              round(max(extractState("D",simRun)*scal))))
+  deaths <-max(extractState("D",simRun)*scal)
+  print(paste("Deaths:", round(deaths)))
   
 
   #2. count employment less
@@ -426,23 +425,23 @@ exportSIR <- function(sim1,place,contact,pcombo) {
 packagePlot <- function(sim1,place,contact, sim2) {
   
   ### produce plots
-  fn <- paste('SIR_dcm_', place, contact, ver, ".png", sep="")
-  pdf(paste(outPath, "figure", fn, sep="/"))
+  fn <- paste(outPath, "figure", paste('SIR_dcm_', place, contact, ver, ".png", sep=""), sep="/")
+  pdf(fn)
   plotSIR(sim1,sim2)
   dev.off()
-  print(paste("  ...saved",fn))
+  print(paste("  saved plot:",fn))
   
-  fn <- paste('SIR2_dcm_', place, contact, ver, ".png", sep="")
-  pdf(paste(outPath, "figure", fn, sep="/"))
+  fn <- paste(outPath, "figure", paste('SIR2_dcm_', place, contact, ver, ".png", sep=""), sep="/")
+  pdf(fn)
   plotSIRHealth(sim1,sim2)
   dev.off()
-  print(paste("  ...saved",fn))
+  print(paste("  saved plot:",fn))
   
-  fn <- paste('Infected_naics_dcm_', place, contact, ver, ".png", sep="")
-  pdf(paste(outPath, "figure", fn, sep="/"))
+  fn <- paste(outPath, "figure", paste('Infected_naics_dcm_', place, contact, ver, ".png", sep=""), sep="/")
+  pdf(fn)
   plotIbyNaics(sim1)
   dev.off()
-  print(paste("  ...saved",fn))
+  print(paste("  saved plot:",fn))
 }
 
 
