@@ -119,7 +119,7 @@ calibratedPar <- function(place) {
   #load calibrated parameter file
   setwd(parmPath)
   fn <- paste(caliParm, place, datv, ".csv", sep="")
-  if (max(list.files()==fn)==0){
+  if (!file.exists(fn)){
     stop(paste("missing calibrated parameter file: ", fn, sep=""))
   }
   
@@ -143,7 +143,7 @@ loadData <- function(place,contact) {
   fn <- paste(ctMatData, place, contact, datv,".csv",sep="")
   
   # check input file exist
-  if (max(list.files()==fn)==0){
+  if (!file.exists(fn)){
     stop(paste("missing contact matrix: ", fn, sep=""))
   }
   
@@ -169,7 +169,7 @@ loadData <- function(place,contact) {
 
 # check if file exist and load  -----------------------------------------------------
 checkLoad <- function(fn) {
-  if (max(list.files()==fn)==0){
+  if (!file.exists(fn)){
     stop(paste("missing input data file : ", fn, sep=""))
   }
   return(read.csv(fn, header=TRUE))

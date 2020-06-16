@@ -107,6 +107,8 @@ for (m in msaList){
     ## adjust number of people and contact by weight and policy vector 
     Cp$num_people<-C$num_people * w_i
     Cp$num_contact_per_person_day<-C$num_contact_per_person_day * w_j * Th[[policy]]
+    
+    ## indicate whether these individuals are actively working or work from home
     Cp$active_emp <- ThW[[policy]] * (ThW$naics_i>0)
     
     
@@ -140,6 +142,6 @@ for (m in msaList){
     print(paste("export contact matrix:",fn))
   }
   
-  rm(C, Th, Cmat, Cmat2, Cp, policy)
+  rm(C, Th, ThW, Cmat, Cmat2, Cp, policy)
 }
 

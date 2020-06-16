@@ -46,10 +46,10 @@ grid_search <- function(place, covid, rangeToT){
   ### grid search
   # back out beta from the R0 and tau
   if (place=="5600"){
-    lb<-c(5, -1,  5)
-    ub<-c(50,  2,  20)
-    # lb<-c(20,  0,  10)
-    # ub<-c(40,  2,  20)
+    # lb<-c(5, -1,  5)
+    # ub<-c(50,  2,  20)
+    lb<-c(20,  0,  10)
+    ub<-c(40,  2,  20)
     step1<-c(5, 1,  5)
     name  <-"NYC"
     TTTcali <-c(0,15,25,nt-1)
