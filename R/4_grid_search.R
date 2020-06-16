@@ -26,6 +26,10 @@ grid_par <- function(parm, R0scale){
 ### grid search 
 grid_search <- function(place, covid, rangeToT){
   
+  print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+  print(paste("!! Starting grid search for MSA", place))
+  print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+  
   #number of time periods
   nt<-dim(covid)[1]
   
@@ -205,7 +209,7 @@ grid_search <- function(place, covid, rangeToT){
 rangeToT<-60
 
 ### load covid death and cases data
-COVID <-read.csv(deathData,header=TRUE)
+COVID <-checkLoad(deathData)
 
 #### foreach MSA run grid search to calibrate parameters
 for (m in msaList){

@@ -27,10 +27,10 @@ library(tidyr)
 ## user input file names
 
 # data for fitting death
-deathData <<- "covid_case_death_jh.csv"
+deathData <<- paste(dataPath,"covid_case_death_jh.csv",sep="/")
 
 # SEIR model parameters
-seirParm  <<- "params.csv"
+seirParm  <<- paste(parmPath,"params.csv",sep="/")
 
 # contact matrix file names start with
 ctMatData <<- "C_msa"
@@ -38,18 +38,6 @@ ctMatData <<- "C_msa"
 # calibrated parameter name
 caliParm  <<- "calibrated_parm_msa"
 
-
-## input parameters
-setwd(parmPath)
-if (!file.exists(seirParm)){
-  stop(paste("missing input parameters files: ", parmPath, seirParm, sep="/"))
-}
-
-## death counts used for calibration
-setwd(dataPath)
-if (!file.exists(deathData)){
-  stop(paste("missing deaths count from Johns Hopkins: ", parmPath, deathData, sep="/"))
-}
 
 
 #####################################
@@ -75,7 +63,7 @@ TTT <<-c(0,15,75,150)
 ## locations
 # NYC, Chicago, Sacramento
 # msa  "5600", "1600", "6920"
-msaList<<-c("5600","1600","6920")
+msaList<<-c("5600")
 
 
 #####################################
@@ -89,7 +77,7 @@ ver<<-"_combo"
 datv<<-""
 
 ### save results/plots?
-outputSIR<<-0
+outputSIR<<-1
 
 # fix beta as counterfactual, 0 for varying beta, 1 for beta1 and 2 for beta2
 fixBETA<<-0
@@ -108,7 +96,7 @@ scalBETA<<-1
 COMPART   <<-c("S","E","Ia","Ins","Ihc","Rq","Rqd","Rnq","D")
 
 # load user defined SIR parameters
-PAR <-read.csv(paste(parmPath,seirParm,sep="/"),header=TRUE)
+PAR <-checkLoad(seirParm)
 
 #constant parameters
 betaH <-min(PAR$betaH)
