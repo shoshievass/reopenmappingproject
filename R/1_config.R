@@ -63,15 +63,18 @@ TTT <<-c(0,15,75,150)
 ## locations
 # NYC, Chicago, Sacramento
 # msa  "5600", "1600", "6920"
-msaList<<-c("5600")
+msaList<<-c("5600", "1600", "6920")
+msaList<<-c("1600")
 
+## source of input for contact matrix
+Csource<<-list(msa5600="fred",msa1600="replica",msa6920="replica")
 
 #####################################
 # input/output versions
 #####################################
 
 #output version
-ver<<-"_combo"
+ver <<-"_combo"
 
 #input (data,contact matrix) version
 datv<<-""
@@ -80,10 +83,10 @@ datv<<-""
 outputSIR<<-1
 
 # fix beta as counterfactual, 0 for varying beta, 1 for beta1 and 2 for beta2
-fixBETA<<-0
+fixBETA  <<-0
 
 #beta scale factor to test sensitivity
-scalBETA<<-1
+scalBETA <<-1
 
 
 
@@ -119,8 +122,8 @@ GAMMA   <<-gammaD - DELTAhc    # recovery rate to account for variation in death
 typeAgeSick <<-as.matrix(PAR$age*10+PAR$sick)
 
 #wtd average duration of infected (not in the SIR model, a scaling factor in calibration exercise)
-infectDuration<<-min(PAR$infectionDuration)
-# infectDuration<<-psi * (1/mean(TAU)) + (1-psi) * (1/mean(TAU) + 1/gamma)
+# infectDuration<<-min(PAR$infectionDuration)
+infectDuration<<-psi * (1/mean(TAU)) + (1-psi) * (1/mean(TAU) + 1/gamma)
   
 # initial condition: number of people in I^A per type
 initNumIperType<<-1
