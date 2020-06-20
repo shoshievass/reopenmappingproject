@@ -10,7 +10,7 @@
 ## a formal estimation procedure is currently under development 
 
 #parse calibrated parameter
-grid_par <- function(parm, R0scale){
+gridPar <- function(parm, R0scale){
 
   #transmission rate
   beta1<-parm[[1]]/R0scale
@@ -52,24 +52,24 @@ grid_search <- function(place, covid, rangeToT){
   if (place=="5600"){
     # lb<-c(5, -1,  5)
     # ub<-c(50,  2,  20)
-    lb<-c(20,  0,  10)
-    ub<-c(40,  2,  20)
+    lb<-c(10, -7, 0)
+    ub<-c(30, -1, 25)
     step1<-c(5, 1,  5)
     name  <-"NYC"
-    TTTcali <-c(0,15,25,nt-1)
+    TTTcali <-c(0,15,33,nt-1)
     tRange<-seq(10,rangeToT)
   }
   if (place=="1600"){
-    lb<-c(20, -5,  0)
-    ub<-c(60,  2,  40)
-    step1<-c(10, 1,  10)
+    lb<-c(20, -7,  0)
+    ub<-c(50, -3, 20)
+    step1<-c(5, 1,  5)
     name  <-"Chicago"
-    TTTcali <-c(0,15,25,nt-1)
+    TTTcali <-c(0,15,23,nt-1)
     tRange<-seq(13,rangeToT)
   }
   if (place=="6920"){
-    lb<-c(0, -1,  0)
-    ub<-c(10,  2,  5)
+    lb<-c( 0, -5,  0)
+    ub<-c(10,  0,  5)
     step1<-c(2, 1,  1)
     name  <-"Sacramento"
     TTTcali <-c(0,15,23,nt-1)
@@ -92,13 +92,7 @@ grid_search <- function(place, covid, rangeToT){
       iList<-seq(max(lb[2],g0[2]-step[j-1,2]),min(ub[2],g0[2]+step[j-1,2]),step[j-1,2]) 
       tList<-seq(max(lb[3],g0[3]-step[j-1,3]),min(ub[3],g0[3]+step[j-1,3]),step[j-1,3])
     }
-    if (place=="6920"){
-      #for sacramento, we fix initial value
-      gList<-expand.grid(rList,tList)
-      gList<-cbind(gList[,1], 0, gList[,2])
-    }else{
-      gList<-expand.grid(rList,iList,tList)
-    }
+    gList<-expand.grid(rList,iList,tList)
     ng<-dim(gList)[1]
     
     fitDeath<-matrix(0,ng,nt)
@@ -107,7 +101,7 @@ grid_search <- function(place, covid, rangeToT){
     start_time <- Sys.time()
     for (i in 1:ng){
       ### parameters
-      parm<-grid_par(gList[i,], infectDuration*eig)
+      parm<-gridPar(gList[i,], infectDuration*eig)
       vpar1["beta"] <-parm$beta1
       vpar2["beta"] <-parm$beta2
       
@@ -149,7 +143,7 @@ grid_search <- function(place, covid, rangeToT){
                     " beta1=",format(parm$beta1,digits=4),
                     " beta2=",format(parm$beta2,digits=4),
                     " I0=",   format(parm$I0   ,digits=4),
-                    " cum death=",format(fitDeath[i,nt],digits=0), sep=""))
+                    " death/100k=",format(fitDeath[i,nt],digits=0), sep=""))
       }
     }
     
@@ -171,7 +165,7 @@ grid_search <- function(place, covid, rangeToT){
     
     #optimized parameter
     g0<-as.double(gList[gstar,])
-    parm<-grid_par(g0, infectDuration*eig)
+    parm<-gridPar(g0, infectDuration*eig)
       
     ### plot comparison
     par(mfrow=c(1,1))
@@ -183,6 +177,9 @@ grid_search <- function(place, covid, rangeToT){
     abline(v=TTTcali[2], col="gray")
     
     ## check within grid search boundary
+    if(min((g0<ub) * (g0>lb))!=1){
+      print(rbind(lb,g0,ub))
+    }
     stopifnot(min((g0<ub) * (g0>lb))==1)
     runOK<-ifelse(j==4,1,0)
   }

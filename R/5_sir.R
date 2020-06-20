@@ -13,7 +13,6 @@ run_sir <- function(place, policy, par, sim_ref){
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   print(paste("!! Running SIR for policy combo", i, ":", 
               policy[[1]], policy[[2]], policy[[3]], "at place", place, "......!!"))
-  print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   
   sim0<-NA
   # for each of three phases
@@ -77,8 +76,6 @@ run_sir <- function(place, policy, par, sim_ref){
     }
   }
   
-  #check deaths and employment loss
-  calOutcome(sim0)
   return(sim0)
 }
 
@@ -87,6 +84,7 @@ run_sir <- function(place, policy, par, sim_ref){
 # run SIR
 #####################################
 start_time <- Sys.time()
+
 
 # foreach place
 for (m in msaList){
@@ -100,8 +98,10 @@ for (m in msaList){
   for (i in 1:dim(policyCombo)[1]){
     if (i==1){
       sim_ref<-run_sir(m, as.vector(policyCombo[i,]), par, NA)
+      outstats_ref<-calOutcome(sim_ref)
     }else{
-      run_sir(m, as.vector(policyCombo[i,]), par, sim_ref)
+      sim_i<-run_sir(m, as.vector(policyCombo[i,]), par, sim_ref)
+      outstats_i<-calOutcome(sim_i)
     }
   }
 }

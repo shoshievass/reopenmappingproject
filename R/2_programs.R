@@ -75,7 +75,7 @@ initialCondition <- function(fromT,sim0) {
   #set up initial conditions 
   if (fromT==0){
     # set a constant infection fraction in each type
-    Ia_0   <- pmin(N,rep(initNumIperType,nc))
+    Ia_0   <- N*pmin(initNumIperType/1e3,1)
     S_0    <- N-Ia_0
     E_0    <- rep(0,nc)
     Ins_0  <- rep(0,nc)
@@ -143,7 +143,7 @@ loadData <- function(place,contact) {
   
   ## define some global variables of types of agents
   # types
-  types<<- cbind(CData[,c("ego","naics","age","shift","sick","active_emp","n")])
+  types<<- cbind(CData[,c("ego","naics","age","sick","wfh","shift","active_emp","n")])
   
   #age X sick (age*10 + sick)
   ageSickVec <<-match(CData$age*10 + CData$sick, typeAgeSick)
@@ -177,6 +177,10 @@ getCodePath <- function(filename){
   return(out)
 }
 
+# get contact matrix data source  -----------------------------------------------------
+getCmatSource <- function(m){
+  return(Csource[[paste("msa", m, sep="")]])
+}
 
 
 # indicate fraction of people in this type that are actively working  -----------------------------------------------------
@@ -259,6 +263,12 @@ calOutcome<-function(simRun){
   print(paste("Employment loss (1000days):", 
               round(empLoss/1e3)))  
   
+  
+  ## stack outputs
+  out <- matrix(c(deaths, empLoss),1,2)
+  colnames(out)<-c("Deaths", "EmpLoss")
+  
+  return(out)
 }
 
 
@@ -294,8 +304,6 @@ plotSIR <- function(sim1,sim2) {
          legend=state2plot,
          col=mycol[colvec],lwd=2,bty="n",cex=1.2)
 }
-
-
 
 
 # plot SIR health rated variables -----------------------------------------------------
@@ -426,19 +434,19 @@ packagePlot <- function(sim1,place,contact, sim2) {
   
   ### produce plots
   fn <- paste(outPath, "figure", paste('SIR_dcm_', place, contact, ver, ".png", sep=""), sep="/")
-  pdf(fn)
+  png(fn)
   plotSIR(sim1,sim2)
   dev.off()
   print(paste("  saved plot:",fn))
   
   fn <- paste(outPath, "figure", paste('SIR2_dcm_', place, contact, ver, ".png", sep=""), sep="/")
-  pdf(fn)
+  png(fn)
   plotSIRHealth(sim1,sim2)
   dev.off()
   print(paste("  saved plot:",fn))
   
   fn <- paste(outPath, "figure", paste('Infected_naics_dcm_', place, contact, ver, ".png", sep=""), sep="/")
-  pdf(fn)
+  png(fn)
   plotIbyNaics(sim1)
   dev.off()
   print(paste("  saved plot:",fn))
