@@ -50,8 +50,6 @@ grid_search <- function(place, covid, rangeToT){
   ### grid search
   # back out beta from the R0 and tau
   if (place=="5600"){
-    # lb<-c(5, -1,  5)
-    # ub<-c(50,  2,  20)
     lb<-c(10, -7, 0)
     ub<-c(30, -1, 25)
     step1<-c(5, 1,  5)
