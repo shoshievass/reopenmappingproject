@@ -40,11 +40,11 @@ grid_search <- function(place, covid, rangeToT){
   
   
   ### contact matrix with no policy
-  Cmat1<-loadData(place, "_NP")
+  Cmat1<-loadData(place, refPhase1)
   eig<-largestEigenvalue(Cmat1)
   
   ### essential only contact matrix
-  Cmat2<-loadData(place, "_EO")
+  Cmat2<-loadData(place, refPhase2)
   
   
   ### grid search

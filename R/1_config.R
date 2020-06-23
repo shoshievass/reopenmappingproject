@@ -45,17 +45,27 @@ caliParm  <<- "calibrated_parm_msa"
 #####################################
 ### scenarios/place
 
+## contact definition for 
+# W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), 
+# and M(mask), although M no impact on contact
+contactPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:3)
+policyList <<- policyTagString(contactPolicy)
+
 ## all scenarios
-policyList<<-c("_NP","_EO","_AS","_I60","_WFH","_CR")
+# policyList<<-c("_NP","_EO","_AS","_I60","_WFH","_CR")
 
 ## reference policies
-refPolicy   <-expand.grid(c("_NP"),c("_EO"),c("_NP"))
+refPhase1 <<-"_W4-S3-N3-E2-M3"
+refPhase2 <<-"_W1-S1-N1-E2-M2"
+refPhase3 <<-"_W4-S3-N1-E2-M2"
+refPolicy   <-c(refPhase1,refPhase2,refPhase3)
+
 
 ## combinations
-policyFull <- expand.grid(c("_NP"),c("_EO"),policyList)
+policyFull <- expand.grid(refPhase1,refPhase2, policyList, stringsAsFactors = FALSE)
 
 
-policyCombo<<-rbind(policyFull)
+policyCombo<<-rbind(refPolicy,policyFull)
 
 ## time period of each phases with different policies
 TTT <<-c(0,15,75,150)
@@ -64,7 +74,13 @@ TTT <<-c(0,15,75,150)
 # NYC, Chicago, Sacramento
 # msa  "5600", "1600", "6920"
 msaList<<-c("5600", "1600", "6920")
-msaList<<-c("1600")
+# msaList<<-c("1600")
+
+## age number of 60
+age60<<-4
+
+## naics code for healthcare
+heathNAICS<<-62
 
 ## source of input for contact matrix
 Csource<<-list(msa5600="fred",msa1600="replica",msa6920="replica")
@@ -80,7 +96,7 @@ ver <<-"_combo"
 datv<<-""
 
 ### save results/plots?
-outputSIR<<-1
+outputSIR<<-0
 
 # fix beta as counterfactual, 0 for varying beta, 1 for beta1 and 2 for beta2
 fixBETA  <<-0

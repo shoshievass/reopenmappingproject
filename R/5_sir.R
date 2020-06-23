@@ -10,10 +10,6 @@
 
 ### wraper function for running SIR under one policy combination 
 run_sir <- function(place, policy, par, sim_ref){
-  print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-  print(paste("!! Running SIR for policy combo", i, ":", 
-              policy[[1]], policy[[2]], policy[[3]], "at place", place, "......!!"))
-  
   sim0<-NA
   # for each of three phases
   for (j in 1:3){
@@ -21,21 +17,9 @@ run_sir <- function(place, policy, par, sim_ref){
     # load contact matrix from synthetic population
     Cmat<<-loadData(place, contact)
     
-    # load default parameters
+    # load default parameters and set transmission rate
     vpar<-vparameters0
-    
-    #transmission rate
-    if (fixBETA==1){
-      #fix at initial (high) level
-      vpar["beta"]<-par$beta
-    }else if (fixBETA==2){
-      #fix at reduced level
-      vpar["beta"]<-par$beta2        
-    }else{
-      # consider reduced transmission rate in phase 2 and 3
-      vpar["beta"]<-ifelse(j>1,par$beta2,par$beta)
-    }
-    
+    vpar["beta"]<-setBeta(contact, par, j) 
     
     ### initial condition
     inits<-initialCondition(TTT[j],sim0)
@@ -85,6 +69,16 @@ run_sir <- function(place, policy, par, sim_ref){
 #####################################
 start_time <- Sys.time()
 
+# aggregate key outputs
+df <- data.frame(Policy1=character(),Policy2=character(),Policy3=character(),
+                 MSA=character(), 
+                 BaselineAdjDeaths=numeric(), 
+                 BaselineAdjEmpHours=numeric(), 
+                 Deaths=numeric(), 
+                 EmpHoursLost=numeric(), 
+                 Population=numeric(), 
+                 stringsAsFactors=FALSE) 
+df_r<-0
 
 # foreach place
 for (m in msaList){
@@ -96,15 +90,33 @@ for (m in msaList){
   
   # for each policy combo
   for (i in 1:dim(policyCombo)[1]){
+    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    print(paste("!! Running SIR for policy combo", i,"/", dim(policyCombo)[1], ":", 
+                policyCombo[i,1], policy[i,2], policy[i,3], "at MSA", m, "......!!"))
+    
     if (i==1){
+      #the first is reference policies in each MSA
       sim_ref<-run_sir(m, as.vector(policyCombo[i,]), par, NA)
       outstats_ref<-calOutcome(sim_ref)
     }else{
       sim_i<-run_sir(m, as.vector(policyCombo[i,]), par, sim_ref)
       outstats_i<-calOutcome(sim_i)
+      
+      ## collect outputs
+      df_r<-df_r+1
+      df[df_r,]<-c(gsub("_","",policyCombo[i,]), 
+                   m, outstats_i[1:2]/outstats_ref[1:2]-1,outstats_i)
     }
   }
 }
 rm(Cmat, par)
+
+
+#export csv
+fn <- paste(outPath, 
+            paste("Agg_SIR", datv, ".csv", sep=""), sep="/")
+write.table(df, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
+print(paste("aggregate SIR outputs:",fn))
+
 end_time <- Sys.time()
 print(end_time - start_time)
