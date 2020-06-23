@@ -51,8 +51,6 @@ caliParm  <<- "calibrated_parm_msa"
 contactPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:3)
 policyList <<- policyTagString(contactPolicy)
 
-## all scenarios
-# policyList<<-c("_NP","_EO","_AS","_I60","_WFH","_CR")
 
 ## reference policies
 refPhase1 <<-"_W4-S3-N3-E2-M3"
@@ -74,7 +72,6 @@ TTT <<-c(0,15,75,150)
 # NYC, Chicago, Sacramento
 # msa  "5600", "1600", "6920"
 msaList<<-c("5600", "1600", "6920")
-# msaList<<-c("1600")
 
 ## age number of 60
 age60<<-4
