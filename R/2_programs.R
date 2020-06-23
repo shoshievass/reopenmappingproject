@@ -149,7 +149,7 @@ loadData <- function(place,contact) {
   ageSickVec <<-match(CData$age*10 + CData$sick, typeAgeSick)
 
   #healthcare worker
-  healthVec <<-CData$naics==62
+  healthVec <<-CData$naics==heathNAICS
   
   #contact matrix
   Cmat <- as.matrix(CData[,grepl("rate", colnames(CData))])
@@ -191,6 +191,66 @@ tagActiveEmp <- function(sim1) {
   }
   return(sim1)
 }  
+
+
+
+# generate string policy tag names from indicator for definition of each contact level -------------------------------------
+policyTagString <- function(policyVec) {
+  #load calibrated parameter file
+  poli <-paste("_W",policyVec[,1],
+               "-S",policyVec[,2],
+               "-N",policyVec[,3],
+               "-E",policyVec[,4],
+               "-M",policyVec[,5],sep="")
+  return(poli)
+}
+
+
+
+# extract policy indciator  -------------------------------------
+parsePolicyTag <- function(policyTag, poli) {
+  #load calibrated parameter file
+  pos <- gregexpr(poli,refPhase1)[[1]][1] + 1
+  return(as.numeric(substr(policyTag, pos, pos)))
+}
+
+
+# set transmission rate beta in SIR model  -------------------------------------
+setBeta <- function(contact, par, j) {
+  #transmission rate
+ 
+  
+  if (fixBETA==1){
+    #fix at initial (high) level
+    beta<-par$beta
+  }else if (fixBETA==2){
+    #fix at reduced level
+    beta<-par$beta2        
+  }else{
+    #any policy assumption on transmission rate
+    beta_i <- parsePolicyTag(contact, "M")
+    
+    if (is.na(beta_i)){
+      # consider reduced transmission rate in phase 2 and 3
+      beta<-ifelse(j>1,par$beta2,par$beta)
+    }else{
+      if (beta_i==1){
+        #further reduced beta
+        beta<-par$beta2*0.75
+      }else if (beta_i==2){
+        #reduced beta (status quo in phase 2 and 3)
+        beta<-par$beta2
+      }else if (beta_i==3){
+        #initial beta (status quo in phase 1)
+        beta<-par$beta        
+      }else(
+        stop("only support M in 1-3")
+      )
+    }
+  }
+  return(beta)
+}
+
 
 ### compute largest eigen value from contact matrixs -----------------------------------------------------
 largestEigenvalue <- function(Cmat) {
@@ -265,8 +325,8 @@ calOutcome<-function(simRun){
   
   
   ## stack outputs
-  out <- matrix(c(deaths, empLoss),1,2)
-  colnames(out)<-c("Deaths", "EmpLoss")
+  out <- matrix(c(deaths, empLoss, sum(types$n)),1,3)
+  colnames(out)<-c("Deaths", "EmpLoss", "Population")
   
   return(out)
 }
