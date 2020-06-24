@@ -39,7 +39,3 @@ source(getCodePath("4_grid_search.R"))
 
 ## run SIR
 source(getCodePath("5_sir.R"))
-
-
-
-

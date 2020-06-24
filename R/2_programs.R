@@ -59,7 +59,7 @@ SEIIRRD_model=function(t, x, vparameters){
     dRnq = +gamma*as.matrix(Ins) 
     dD   = +mortV*as.matrix(Ihc)
     
-    # output in the same order as the model compartments are at the beginning of the function
+    # output in the same order as the model compartments 
     out=c(dS,dE,dIa,dIns,dIhc,dRq,dRqd,dRnq,dD)
     list(out)
   })
@@ -114,7 +114,7 @@ initialCondition <- function(fromT,sim0) {
 
 
 # calibrated parameters  -----------------------------------------------------
-# store previously calibrated parameters
+# load previously calibrated parameters
 calibratedPar <- function(place) {
   #load calibrated parameter file
   fn <- paste(parmPath, paste(caliParm, place, datv, ".csv", sep=""), sep="/")
@@ -127,8 +127,6 @@ calibratedPar <- function(place) {
 
   return(list(I0=I0,beta=beta,beta2=beta2))
 }
-
-
 
 
 # load contact matrix data -----------------------------------------------------
