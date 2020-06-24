@@ -73,6 +73,9 @@ TTT <<-c(0,15,75,150)
 # msa  "5600", "1600", "6920"
 msaList<<-c("5600", "1600", "6920")
 
+msaList<<-c("1600")
+
+
 ## age number of 60
 age60<<-4
 
@@ -128,8 +131,8 @@ TAU    <<-PAR$tau
 
 #input mortality conditional on infected, transform into transition rate
 mort     <-PAR$mort
-DELTAhc <<-mort*gammaD/psi     # death rate 
-GAMMA   <<-gammaD - DELTAhc    # recovery rate to account for variation in death, so total transition rate out of infected is kept at gammaD
+DELTAhc <<-(mort/psi)   * (1/10)     # death rate 
+GAMMA   <<-(1-mort/psi) * (1/20)     # recovery rate to account for variation in death, so total transition rate out of infected is kept at gammaD
 
 ## unique age X sick type: age*10 + sick
 typeAgeSick <<-as.matrix(PAR$age*10+PAR$sick)
