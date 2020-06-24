@@ -8,7 +8,104 @@
 
 
 
-#### foreach MSA
+### contact at work  
+workContact <- function(Th, poli) {
+  
+  #essential worker  
+  essentialWorker<- (Th$essential_i==1 & Th$essential_j==1)
+  
+  if (poli==1){
+    # essential only
+    contactW <-  essentialWorker
+  }else if (poli==2){
+    # WFH: essential only + cannot work from home
+    contactW <- essentialWorker | (Th$wfh_i==0 & Th$wfh_j==0)
+  }else if (poli==3){
+    # AS
+    contactW <- essentialWorker + 0.5*((essentialWorker==0) & (Th$shift_i==Th$shift_j))
+  }else if (poli==4){
+    contactW<-1
+  }else{
+    stop("Only support W 1-4")
+  }
+  return(contactW)
+}
+
+
+
+### contact at school  
+schoolContact <- function(Th, poli) {
+  if (poli==1){
+    # no school
+    contactS <-  0
+  }else if (poli==2){
+    # AS
+    contactS <- 0.5*(Th$shift_i==Th$shift_j)
+  }else if (poli==3){
+    contactS<-1
+  }else{
+    stop("Only support S 1-3")
+  }
+  return(contactS)  
+}  
+
+### contact at neighborhood
+neighborContact <- function(Th, poli){
+  if (poli==1){
+    contactN<-0.1
+  }else if (poli==2){
+    contactN<-0.5
+  }else if (poli==3){
+    contactN<-1
+  }else{
+    stop("Only support N 1-3")
+  }
+  return(contactN)
+}
+
+### whether we quarantee elderly at work
+elderQuarantine <- function(Th, poli){
+  if (poli==1){
+    # keep work contact only if both <60 
+    contactE<- (Th$age_i<age60 & Th$age_j<age60)
+  }else if (poli==2){
+    contactE<-1    
+  }else{
+    stop("Only support E 1-2")
+  }
+  return(contactE)
+}  
+
+### indicate the fraction that each type is actively working
+activeEmp <- function(Th, W, E) {
+  
+  if (W==1){
+    # essential only
+    activeW <-pmax(Th$essential_i,Th$wfh_i)
+  }else if (W==3){
+    # AS
+    activeW <-Th$essential_i + (Th$essential_i==0) * (0.5+0.5*Th$wfh_i) 
+  }else if (W==4|W==2){
+    # WFH or regular, not impact on employment
+    activeW <-1
+  }else{
+    stop("Only support W 1-4")
+  }
+  
+  if (E==1){
+    # 60+ only essential or WFH
+    activeW <- (Th$age_i< age60) * activeW + 
+               (Th$age_i>=age60) * pmax(Th$essential_i,Th$wfh_i)
+  }
+  
+  return(activeW)
+}
+
+
+##########################################################################
+######## main script foreach MSA
+##########################################################################
+
 for (m in msaList){
   
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -19,12 +116,12 @@ for (m in msaList){
   ### load data
   #####################################
   # load contact
-  fn <- paste(dataPath, paste("contact_msa", m, datv, ".csv",sep=""), sep="/")
+  fn<- paste(dataPath, paste("contact_msa", m, "_", getCmatSource(m), ".csv",sep=""), sep="/")
   C <-checkLoad(fn)
   
   # load types
   TYPE <-checkLoad(paste(dataPath, "msa_type.csv", sep="/"))
-  TYPE<-TYPE[TYPE$msa==m,!(colnames(TYPE) %in% c("msaname"))]
+  TYPE <-TYPE[TYPE$msa==m,!(colnames(TYPE) %in% c("msaname"))]
   
   # types for individual i and j
   TYPE_i<-TYPE
@@ -42,110 +139,112 @@ for (m in msaList){
   ### policy definition
   #####################################
   
+  ## full type vector
+  typeVec <-c("age", "naics", "sick", "wfh", "shift")
+  
+  ## adjust number of people and contact by weight for health, WFH, and shift types 
+  C$num_people<-C$num_people * (C$sick_w_i * C$shift_w_i * C$wfh_w_i)
+  C$num_contact_per_person_day<-C$num_contact_per_person_day * (C$sick_w_j * C$shift_w_j * C$wfh_w_j) 
+  
   # type space for individual i and j
   # define contact between type i and j, and work status for each type i
-  Th<-C[,c("age_i","naics_i","sick_i","shift_i","wfh_i","essential_i","pct_wfh_i",
-           "age_j","naics_j","sick_j","shift_j","wfh_j","essential_j","contactlvl")]
-  ThW<-Th
+  Th <-C[,c(paste(typeVec,"i",sep="_"), 
+            paste(typeVec,"j",sep="_"),
+            "essential_i","essential_j","contactlvl")]
   
-  # no policy, keep all contacts and everyone worker is employed
-  Th$NP <-1
-  ThW$NP<-1
-  
-  # essential only
-  Th$EO <- (Th$contactlvl=="hh") + 
-              0.1*(Th$contactlvl=="neighbor") + 
-              (Th$contactlvl=="work" & Th$essential_i==1 & Th$essential_j==1)
-  ThW$EO<- pmax(ThW$essential_i,ThW$pct_wfh_i) 
+  ## contact definition for 
+  # W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), 
+  # and M(mask), although M no impact on contact
+  for (p in 1:dim(contactPolicy)[1]){
     
-  # cautious reopening
-  Th$CR <- (Th$contactlvl=="hh") + 
-              0.1*(Th$contactlvl=="neighbor") + 
-              (Th$contactlvl=="work") + (Th$contactlvl=="school")
-  ThW$CR<- 1
-  
-  # isolate 60+
-  Th$I60<- (Th$contactlvl=="hh") + 
-    0.1*(Th$contactlvl=="neighbor") + 
-    (Th$contactlvl=="work" &  ((Th$essential_i==1 & Th$essential_j==1) | (Th$age_i<4 & Th$age_j<4)))  +
-    (Th$contactlvl=="school")
-  ThW$I60<- pmax(ThW$essential_i,ThW$pct_wfh_i,ThW$age_i<4)
-  
-  # work from home
-  Th$WFH<- (Th$contactlvl=="hh") + 
-    0.1*(Th$contactlvl=="neighbor") + 
-    (Th$contactlvl=="work" &  ((Th$essential_i==1 & Th$essential_j==1) | (Th$wfh_i==0 & Th$wfh_j==0)))  +
-    (Th$contactlvl=="school")
-  ThW$WFH<- 1
-  
-  # alternate schedule
-  Th$AS <- (Th$contactlvl=="hh") + 
-    0.1*(Th$contactlvl=="neighbor") + 
-    (Th$contactlvl=="work" &  (Th$essential_i==1 & Th$essential_j==1)) +
-    0.5*(Th$contactlvl=="work"   &  (Th$essential_i==0 | Th$essential_j==0) & Th$shift_i==Th$shift_j) +
-    0.5*(Th$contactlvl=="school" & Th$shift_i==Th$shift_j)
-  ThW$AS<- (ThW$essential_i==1) + (ThW$essential_i==0) * (0.5+0.5*ThW$pct_wfh_i) 
-  
-  
-  #####################################
-  ### contact matrix for each policy
-  #####################################
-  
-  for (p in 1:length(policyList)){
-    
-    policy <- gsub("_", "", policyList[p])
+    #policy tag
+    policy <- gsub("_", "", policyTagString(contactPolicy[p,]))
     Cp <- C
     
-    # weight
-    # note we currently have two types shift (for alternating schedule) and wfh. 
-    # They are the same but with different weight: shift_w and wfh_w
-    # So we need to define weights conditional on policy
-    if (policy=="AS"){
-      w_i<-C$sick_w_i * C$shift_w_i
-      w_j<-C$sick_w_j * C$shift_w_j
-    }else{
-      w_i<-C$sick_w_i * C$wfh_w_i
-      w_j<-C$sick_w_j * C$wfh_w_j    
-    }
+    ################################################
+    ### define contact under policy intervention
+    ################################################
     
-    ## adjust number of people and contact by weight and policy vector 
-    Cp$num_people<-C$num_people * w_i
-    Cp$num_contact_per_person_day<-C$num_contact_per_person_day * w_j * Th[[policy]]
+    #work contact
+    contactW <- workContact(Th, contactPolicy[p,1])   
+    #school contact
+    contactS <- schoolContact(Th, contactPolicy[p,2]) 
+    #neighbor contact
+    contactN <- neighborContact(Th, contactPolicy[p,3])
+    #elderly  quarantine
+    contactE <- elderQuarantine(Th, contactPolicy[p,4]) 
     
-    ## indicate whether these individuals are actively working or work from home
-    Cp$active_emp <- ThW[[policy]] * (ThW$naics_i>0)
+    #contact at each level
+    Cp$contactPolicy <- C$num_contact_per_person_day * (
+      (Th$contactlvl=="hh") + 
+      (Th$contactlvl=="school")   * contactS + 
+      (Th$contactlvl=="neighbor") * contactN + 
+      (Th$contactlvl=="work") * (contactW * contactE + (1-contactE) * workContact(Th, 1)) ) # for elderly, only essential
     
+    #indicate whether these individuals are actively working or work from home
+    Cp$activeEmp <- activeEmp(Th, contactPolicy[p,1], contactPolicy[p,4]) * (Th$naics_i>0)
+    stopifnot(max(Cp$activeEmp)<=1)  
+    
+    #####################################
+    ### contact matrix for each policy
+    #####################################
     
     ## aggregate across contact levels
     Cmat<-Cp %>% 
-      group_by(age_i, naics_i, sick_i, shift_i, age_j, naics_j, sick_j, shift_j) %>%    # group by type i and j
+      group_by(age_i, naics_i, sick_i, wfh_i, shift_i, 
+               age_j, naics_j, sick_j, wfh_j, shift_j) %>%    # group by type i and j
       summarise(n          = mean(num_people), 
-                active_emp = mean(active_emp), 
-                contact    = sum(num_contact_per_person_day))  # numebr of people, active work status of i and contact
+                active_emp = mean(activeEmp), 
+                contact    = sum(contactPolicy))  # number of people, active work status of i and contact
     
     #unique indicator of types
     Cmat$ego  <- as.integer(interaction(
-                  Cmat$age_i, Cmat$naics_i, Cmat$sick_i, Cmat$shift_i, drop = TRUE,lex.order = TRUE))
+      Cmat$age_i, Cmat$naics_i, Cmat$sick_i, Cmat$wfh_i, Cmat$shift_i, drop = TRUE, lex.order = TRUE))
     Cmat$rate <- as.integer(interaction(
-                  Cmat$age_j, Cmat$naics_j, Cmat$sick_j, Cmat$shift_j, drop = TRUE,lex.order = TRUE))
+      Cmat$age_j, Cmat$naics_j, Cmat$sick_j, Cmat$wfh_j, Cmat$shift_j, drop = TRUE, lex.order = TRUE))
     
     #reshape long to wide
-    Cmat2 <- Cmat[,!(colnames(Cmat) %in% c("age_j","naics_j","sick_j","shift_j"))] %>% 
-            spread(key=rate, value=contact,sep="", fill = 0) %>% 
-            rename(age=age_i, naics=naics_i, sick=sick_i, shift=shift_i)
+    Cmat2 <- Cmat[,!(colnames(Cmat) %in% paste(typeVec,"j",sep="_"))] %>% 
+      spread(key=rate, value=contact,sep="", fill = 0) %>% 
+      rename(age=age_i, naics=naics_i, sick=sick_i, wfh=wfh_i, shift=shift_i)
     
     #check dimensions, 
-    #there are 7 additional columns for number of people, active work status, 
-    #4 types columns and 1 indicator for all posible types
-    stopifnot((dim(Cmat2)[2]-dim(Cmat2)[1])==7)
+    #there are 8 additional columns for number of people, active work status, 
+    #5 types columns and 1 indicator for all posible types
+    stopifnot((dim(Cmat2)[2]-dim(Cmat2)[1])==(length(typeVec)+3))
     
     #export csv
     fn <- paste(dataPath, 
                 paste(ctMatData, m, "_", policy, datv, ".csv", sep=""), sep="/")
     write.table(Cmat2, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
     print(paste("export contact matrix:",fn))
+    
+    
+    #collapse to lower dimension contact matrix
+    Cmat1 <- Cmat %>% 
+      group_by(ego, age_i, naics_i, sick_i, wfh_i, shift_i, age_j) %>%    # group by target type 
+      summarise(n=mean(n), rate=sum(contact)) %>% # total contact across type j
+      group_by(age_i, age_j) %>%                  # group by focal type
+      summarise(Value = weighted.mean(rate, n)) %>% #weighted average contact across type i
+      rename(FocalAge = age_i, TargetAge = age_j)
+    
+    Cmat1$PolicyID <- policy
+    
+    if (p==1){
+      CmatAll <- Cmat1
+    }else{
+      CmatAll <- rbind(CmatAll,Cmat1)
+    }
+    
   }
   
-  rm(C, Th, ThW, Cmat, Cmat2, Cp, policy)
+  #export aggregate contact matrix by age
+  fn <- paste(outPath, 
+              paste(ctMatData, m, "_allPolicy", datv, ".csv", sep=""), sep="/")
+  write.table(CmatAll, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
+  print(paste("aggregate contact matrix:",fn))
+  
+  
+  rm(C, Th, Cmat, Cmat2, Cp, policy, typeVec)
 }
 

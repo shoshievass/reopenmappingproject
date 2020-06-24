@@ -1,0 +1,4 @@
+﻿msa,lb_beta1,lb_beta2,lb_I0,ub_beta1,ub_beta2,ub_I0,step_beta1,step_beta2,step_I0,T_beta2,T_range_start
+5600,10,0,-7,30,25,-1,5,5,1,33,10
+1600,20,0,-7,50,20,-3,5,5,1,23,13
+6920,0,0,-5,10,5,0,2,1,1,23,5
