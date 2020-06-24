@@ -78,7 +78,7 @@ df <- data.frame(Policy1=character(),Policy2=character(),Policy3=character(),
                  EmpHoursLost=numeric(), 
                  Population=numeric(), 
                  stringsAsFactors=FALSE) 
-df_r<-0
+dfRow<-0
 
 # foreach place
 for (m in msaList){
@@ -103,8 +103,8 @@ for (m in msaList){
       outstats_i<-calOutcome(sim_i)
       
       ## collect outputs
-      df_r<-df_r+1
-      df[df_r,]<-c(gsub("_","",policyCombo[i,]), 
+      dfRow<-dfRow+1
+      df[dfRow,]<-c(gsub("_","",policyCombo[i,]), 
                    m, outstats_i[1:2]/outstats_ref[1:2]-1,outstats_i)
     }
   }
