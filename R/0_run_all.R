@@ -11,19 +11,17 @@
 rm(list = ls())
 
 ## set up directory
-dir<-Sys.getenv("HOME")
+dir<-dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(dir)
+setwd('..')
+proj<-getwd()
+dataPath <- paste(proj, "data", sep="/")
+codePath <- paste(proj, "R",    sep="/")
+outPath  <- paste(proj, "output", sep="/")
+parmPath <- paste(proj, "parameter", sep="/")
 
-if (dir=="/Users/hanyang") {
-  proj <- paste(dir, "Documents","GitHub","reopenmappingproject", sep="/")
-  stopifnot(dir.exists(proj))
-  dataPath <- paste(proj, "data", sep="/")
-  codePath <- paste(proj, "R",    sep="/")
-  outPath  <- paste(proj, "output", sep="/")
-  parmPath <- paste(proj, "parameter", sep="/")
-} 
 #check if project directory is properly set up
 stopifnot(endsWith(proj, "reopenmappingproject"))
-setwd(proj)
 
 
 ## set up global variables and functions
