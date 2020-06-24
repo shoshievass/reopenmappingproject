@@ -26,7 +26,7 @@ stopifnot(endsWith(proj, "reopenmappingproject"))
 setwd(proj)
 
 
-## set up global varibales and functions
+## set up global variables and functions
 source(paste(codePath,"2_programs.R",sep='/'))
 source(getCodePath("1_config.R"))
 
