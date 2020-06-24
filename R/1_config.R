@@ -35,6 +35,9 @@ seirParm  <<- paste(parmPath,"params.csv",sep="/")
 # contact matrix file names start with
 ctMatData <<- "C_msa"
 
+# inputs for grid search calibration
+gsParm <<- paste(parmPath, "gridsearch.csv",sep="/")
+
 # calibrated parameter name
 caliParm  <<- "calibrated_parm_msa"
 
@@ -45,25 +48,56 @@ caliParm  <<- "calibrated_parm_msa"
 #####################################
 ### scenarios/place
 
-## all scenarios
-policyList<<-c("_NP","_EO","_AS","_I60","_WFH","_CR")
+## contact definition for 
+# W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), 
+# and M(mask), although M no impact on contact
+contactPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:3)
+policyList <<- policyTagString(contactPolicy)
+
 
 ## reference policies
-refPolicy   <-expand.grid(c("_NP"),c("_EO"),c("_NP"))
+refPhase1 <<-"_W4-S3-N3-E2-M3"
+refPhase2 <<-"_W1-S1-N1-E2-M2"
+refPhase3 <<-"_W4-S3-N1-E2-M2"
+refPolicy <-c(refPhase1,refPhase2,refPhase3)
+
 
 ## combinations
-policyFull <- expand.grid(c("_NP"),c("_EO"),policyList)
+policyFull <- expand.grid(refPhase1,refPhase2, policyList, stringsAsFactors = FALSE)
 
 
-policyCombo<<-rbind(policyFull)
+policyCombo<<-rbind(refPolicy,policyFull)
+
+
+#####################################
+# hard code parameters
+#####################################
 
 ## time period of each phases with different policies
 TTT <<-c(0,15,75,150)
 
-## locations
+## MSAs
 # NYC, Chicago, Sacramento
 # msa  "5600", "1600", "6920"
-msaList<<-c("5600")
+msaList<<-c("5600", "1600", "6920")
+msaList<<-c("6920")
+
+
+## age number of 60
+age60<<-4
+
+## naics code for healthcare
+heathNAICS<<-62
+
+## time range of sample used for estimation
+rangeToT<<-60
+
+## fix beta as counterfactual, 0 for varying beta, 1 for beta1 and 2 for beta2
+fixBETA  <<-0
+
+## beta scale factor to test sensitivity
+scalBETA <<-1
+
 
 
 #####################################
@@ -71,21 +105,16 @@ msaList<<-c("5600")
 #####################################
 
 #output version
-ver<<-"_combo"
+ver <<-"_combo"
 
 #input (data,contact matrix) version
 datv<<-""
 
 ### save results/plots?
-outputSIR<<-1
+outputSIR<<-0
 
-# fix beta as counterfactual, 0 for varying beta, 1 for beta1 and 2 for beta2
-fixBETA<<-0
-
-#beta scale factor to test sensitivity
-scalBETA<<-1
-
-
+## source of input for contact matrix
+Csource<<-list(msa5600="fred",msa1600="replica",msa6920="replica")
 
 
 
@@ -110,7 +139,7 @@ vparameters0 <<- c(gamma=gamma,betaH=betaH,eta=eta,psi=psi)
 EPSILON<<-PAR$epsilon
 TAU    <<-PAR$tau
 
-#input mortality conditional on infected, transform into transition rate
+#input mortality conditional on infected, transform into transition rate conditional on symptomatic
 mort     <-PAR$mort
 DELTAhc <<-mort*gammaD/psi     # death rate 
 GAMMA   <<-gammaD - DELTAhc    # recovery rate to account for variation in death, so total transition rate out of infected is kept at gammaD
@@ -119,8 +148,8 @@ GAMMA   <<-gammaD - DELTAhc    # recovery rate to account for variation in death
 typeAgeSick <<-as.matrix(PAR$age*10+PAR$sick)
 
 #wtd average duration of infected (not in the SIR model, a scaling factor in calibration exercise)
-infectDuration<<-min(PAR$infectionDuration)
-# infectDuration<<-psi * (1/mean(TAU)) + (1-psi) * (1/mean(TAU) + 1/gamma)
+# infectDuration<<-min(PAR$infectionDuration)
+infectDuration<<-psi * (1/mean(TAU)) + (1-psi) * (1/mean(TAU) + 1/gamma)
   
 # initial condition: number of people in I^A per type
 initNumIperType<<-1
