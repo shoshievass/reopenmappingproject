@@ -131,8 +131,8 @@ TAU    <<-PAR$tau
 
 #input mortality conditional on infected, transform into transition rate
 mort     <-PAR$mort
-DELTAhc <<-(mort/psi)   * (1/10)     # death rate 
-GAMMA   <<-(1-mort/psi) * (1/20)     # recovery rate to account for variation in death, so total transition rate out of infected is kept at gammaD
+DELTAhc <<-(mort/psi)   * gammaD     # death rate 
+GAMMA   <<-gammaD - DELTAhc         # recovery rate to account for variation in death, so total transition rate out of infected is kept at gammaD
 
 ## unique age X sick type: age*10 + sick
 typeAgeSick <<-as.matrix(PAR$age*10+PAR$sick)
@@ -140,6 +140,8 @@ typeAgeSick <<-as.matrix(PAR$age*10+PAR$sick)
 #wtd average duration of infected (not in the SIR model, a scaling factor in calibration exercise)
 # infectDuration<<-min(PAR$infectionDuration)
 infectDuration<<-psi * (1/mean(TAU)) + (1-psi) * (1/mean(TAU) + 1/gamma)
+tEtoD <<-round(1/mean(EPSILON) + 1/mean(TAU) +  1/gammaD)
+  
   
 # initial condition: number of people in I^A per type
 initNumIperType<<-1

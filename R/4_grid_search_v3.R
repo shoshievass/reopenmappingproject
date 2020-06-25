@@ -21,34 +21,30 @@ gridPar <- function(parm, R0scale){
   return(list(I0=I0,beta1=beta1,beta2=beta2))
 }
 
-# plot comparison of cases and deaths -----------------------------------------------------
-plotCali <- function(t, fitCase, fitDeath, case, dead, t2) {
-  par(mfrow=c(1,1))
+movingAvg <- function(x, b){
+  nx <- length(cx)
+  n <- b*2+1
   
-  plot(t, fitCase, 
-       xlab="", ylab="log death and cases per 100k", 
-       type="l", col="blue", lty=5, ylim=c(-4,10),cex.lab=psize, cex.axis=psize)
-  lines(t, case, type="l", lwd="2", col="blue")
-  lines(t, dead, type="l", lwd="2", col="red")
-  lines(t, fitDeath,type="l",col="red", lty=5)
+  cx <- c(0,cumsum(x))
+  mv <- (cx[(n+1):nx] - cx[1:(nx - n)]) / n
   
-  abline(v=t2[1],  col="gray")
-  abline(v=t2[2], col="black")  
-  
+  #fill out the boundary
+  for (i in 1:b){
+    mv <-c(mean(x[1:(n-i)]), mv, mean(x[(nx-(n-i)+1):nx]))
+  }
+  return(mv)
 }
+
 
 ### grid search 
 grid_search <- function(place, covid, rangeToT){
   
-  
-  place<-m
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   print(paste("!! Starting grid search for MSA", place))
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   
   #number of time periods
   nt<-dim(covid)[1]
-  
   
   ### global parameter values
   vpar <-vparameters0
@@ -63,35 +59,39 @@ grid_search <- function(place, covid, rangeToT){
   ### essential only contact matrix
   Cmat2<-loadData(place, refPhase2)
   
+  ### first reported death and cases
+  tD0<-min(which(covid$deathper100k>0))
+  tC0<-min(which(covid$caseper100k>0))
   
   ### grid search
   # back out beta from the R0 and tau
   if (place=="5600"){
-    lb<-c(5, -7, 0)
+    lb<-c(10, -7, 0)
     ub<-c(30, -1, 25)
     step1<-c(5, 1,  5)
     name  <-"NYC"
-    TTTcali <-c(0,17,nt-1)
-    tRange<-seq(5,rangeToT)
+    TTTcali <-c(0,15,33,nt-1)
+    tRange<-seq(10,rangeToT)
   }
   if (place=="1600"){
-    lb<-c(20, -9,  4)
-    ub<-c(50, -4, 16)
-    step1<-c(5, 1,  4)
+    lb<-c(10, -7,  4)
+    ub<-c(40, -1, 14)
+    step1<-c(5, 1,  2)
     name  <-"Chicago"
     TTTcali <-c(0,15,nt-1)
-    tRangeD<-seq(13,rangeToT) #to be generalized to be first death + 2
-    tRangeC<-seq(offset+2,rangeToT)
+    tRangeD<-seq(15,rangeToT)
+    tRangeC<-seq(15,rangeToT)
   }
   if (place=="6920"){
     lb<-c( 0, -5,  0)
-    ub<-c(10,  0,  5)
-    step1<-c(2, 1,  1)
+    ub<-c(10,  0,  4)
+    step1<-c(2, 1,  0.5)
     name  <-"Sacramento"
-    TTTcali <-c(0,14,nt-1)
-    tRangeD<-seq(offset+2,rangeToT) #to be generalized to be first death + 2
-    tRangeC<-seq(offset+2,rangeToT)
+    TTTcali <-c(0,15,nt-1)
+    tRangeD<-seq(5,rangeToT)
+    tRangeC<-seq(5,rangeToT)
   }
+  
   
   # j rounds of grid search
   step<-rbind(step1, step1*0.1, step1*0.01, step1*0.001)
@@ -148,55 +148,72 @@ grid_search <- function(place, covid, rangeToT){
       }
       
       #death (per 100k) in data
-      fitDeath[i,]<-log(extractState("D",sim0)*1e3)
-      fitCase[i,] <-log(extractSeveralState(c("Ihc","Rq","Rqd","D"),sim0)*1e3)
+      fitDeath[i,]<-extractState("D",sim0)*1e3
+      fitCase[i,] <-extractSeveralState(c("Ihc","Rq","Rqd","D"),sim0)*1e3
       if ((i %% 10)==0){
         print(paste(i,"/",ng,
                     " beta1=",format(parm$beta1,digits=4),
                     " beta2=",format(parm$beta2,digits=4),
-                    " I0=",   format(parm$I0   ,digits=4), sep=""))
+                    " I0=",   format(parm$I0   ,digits=4),
+                    " death/100k=",format(fitDeath[i,nt],digits=0), sep=""))
       }
     }
     
     end_time <- Sys.time()
     print(end_time - start_time)
     
-    #death and cases in the data
-    dead<-log(covid$deathper100k)
-    case<-log(covid$caseper100k)
+    dead<-covid$deathper100k
+    case<-covid$caseper100k
     if (ng>1){
-      ## fit log death, min squared loss
-      errD<-fitDeath - matrix(1,ng,1)%*%dead
-      errC<-fitCase  - matrix(1,ng,1)%*%case
-      sse<-rowSums(errC[,tRangeC]^2) + 10 * rowSums(errD[,tRangeD]^2)
+      ## log cases
+      errC<-fitCase - matrix(1,ng,1)%*%case
+      ## demean cases
+      # errC <- errC-rowMeans(errC[,tRangeC])%*%matrix(1,1,nt)
+    
+      ## log deaths
+      errD<-t(diff(t(fitDeath)))  - matrix(1,ng,1)%*%movingAvg(diff(dead),3)
       
+      ## fit both log cases and log deaths
+      # sse<-rowSums(errC[,tRangeC]^2) + 10 * rowSums(errD[,tRangeD]^2)
+      sse<-rowSums(errD[,tRangeD]^2)
       #best fit
       gstar<-which.min(sse)
     }else{
       gstar<-1
     }
     
+
     #optimized parameter
     g0<-as.double(gList[gstar,])
     parm<-gridPar(g0, infectDuration*eig)
     
-    ### plot comparison of cases and deaths
+    ### plot comparison
+    par(mfrow=c(2,2))
     
-    plotCali(covid$t,fitCase[gstar,],fitDeath[gstar,], case, dead, c(TTTcali[2], rangeToT)) 
     
+    plot(covid$t, fitCase[gstar,], type="l", xlab="")
+    lines(covid$t, 5*case, type="l", lwd="2", col="blue")
+    abline(v=TTTcali[2], col="gray")
+    
+    plot(covid$t, dead, type="l", lwd="2", col="red", xlab="")
+    lines(covid$t, fitDeath[gstar,],type="l")
+    abline(v=TTTcali[2], col="gray")
 
+    plot(2:nt, diff(fitCase[gstar,]), type="l", xlab="")
+    lines(2:nt, 5*movingAvg(diff(case),3), type="l", lwd="2", col="blue")
+    abline(v=TTTcali[2], col="gray")
     
-    
+    plot(2:nt, movingAvg(diff(dead),3), type="l", lwd="2", col="red", xlab="")
+    lines(2:nt, diff(fitDeath[gstar,]),type="l")
+    abline(v=TTTcali[2], col="gray")
+
     ## check within grid search boundary
     if(min((g0<ub) * (g0>lb))!=1){
       print(rbind(lb,g0,ub))
     }
     stopifnot(min((g0<ub) * (g0>lb))==1)
+    runOK<-ifelse(j==4,1,0)
   }
-  
-  
-  
-  
   
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   print("grid search both rounds done!!")
@@ -210,7 +227,7 @@ grid_search <- function(place, covid, rangeToT){
   #export csv  
   # parmOut<-matrix(c(parm$beta1,parm$beta2,parm$I0),1,3)
   # colnames(parmOut)<-c("beta1","beta2","I0") 
-  # fn <- paste(parmPath, paste(caliParm, place, datv, "_v2.csv", sep=""), sep="/")
+  # fn <- paste(parmPath, paste(caliParm, place, datv, ".csv", sep=""), sep="/")
   # write.table(parmOut, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
   # print(paste("export calibrated parameters :",fn))
 }
@@ -227,18 +244,9 @@ for (m in msaList){
   
   ### death data for this MSA
   covid<-COVID[COVID$msa==m,c("t","deathper100k","caseper100k")]
-  offset<-0
-  
-  if (offset>0){
-    nt<-dim(covid)[1]
-    covid$caseper100k[(offset+1):nt] <- 10 * covid$caseper100k[1:(nt-offset)]
-    covid$caseper100k[1:offset]<-0
-  }
   
   ### estimate parameter
   grid_search(m, covid, rangeToT)
 }
-
-
 
 # rm(rangeToT, COVID, covid, Cmat, grid_search)
