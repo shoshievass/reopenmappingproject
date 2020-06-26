@@ -40,6 +40,20 @@ gridPoints <- function(lb, ub, step, j, g0){
 }
 
 
+### set up contact matrix and beta for each phase in the calibration
+setCmatBeta <- function(gsPar, t, CmatList, betaList){
+  
+  #which version of contact matrix and beta to use
+  cmatVer <- gsPar[[paste("cali",t,"_C",sep="")]]
+  betaVer <- gsPar[[paste("cali",t,"_beta",sep="")]]
+  
+  
+  ### edit global parameters
+  vpar <- vparameters0
+  vpar["beta"]<-betaList[betaVer]
+  return(list(Cmat=CmatList[[cmatVer]], vpar=vpar))
+}
+
 ##########################################################################
 ######## main function for grid search 
 ##########################################################################
@@ -48,39 +62,35 @@ gridSearch <- function(place, covid){
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   print(paste("!! Starting grid search for MSA", place))
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-  
-  #number of time periods
-  nt<-dim(covid)[1]
-  
-  ### global parameter values
-  vpar <-vparameters0
-  vpar1<-vpar
-  vpar2<-vpar
-  
-  ### contact matrix with no policy
-  Cmat1<-loadData(place, refPhase1)
-  eig<-largestEigenvalue(Cmat1)
-  
-  ### essential only contact matrix
-  Cmat2<-loadData(place, refPhase2)
-  
-  
+
   ### grid search input parmaeter
   gsPar <- checkLoad(gsParm)
   gsPar <- as.vector(gsPar[gsPar$msa==place,])
   gsCol <- names(gsPar)
+
+  #number of time periods
+  T1<-gsPar$T1
+  covid<-covid[covid$t>T1,]
+  nt<-dim(covid)[1]
   
+  ### timing
+  ### start/end time of each phase: phase 1, phase 2 with beta1, phase 2 with beta2
+  TTTcali <-c(0,gsPar$caliT2-T1,gsPar$caliT3-T1,nt-1)
+
+  ### time range of the sample used for estimation
+  tRange<-seq(gsPar$T_range_start, gsPar$T_range_end)-T1
+
+  ### no policy, essential only, and cautious reopening contact matrix
+  CmatList <- list(loadData(place, refPhase1), 
+                   loadData(place, refPhase2), 
+                   loadData(place, refPhase3))
+  eig<-largestEigenvalue(CmatList[[1]])
+
   ### lower/upper bound for beta1, beta2 and initial condition
   lb   <-unlist(gsPar[grep("lb",   gsCol, perl=T)])
   ub   <-unlist(gsPar[grep("ub",   gsCol, perl=T)])
   step1<-unlist(gsPar[grep("step", gsCol, perl=T)])
   
-  ### start/end time of each phase: phase 1, phase 2 with beta1, phase 2 with beta2
-  TTTcali <-c(0,TTT[2],gsPar$T_beta2,nt-1)
-  
-  ### time range of the sample used for estimation
-  tRange<-seq(gsPar$T_range_start, rangeToT)
-
   ### j rounds of grid search with incrementally small steps
   step<-rbind(step1, step1*0.1, step1*0.01, step1*0.001)
   
@@ -98,8 +108,7 @@ gridSearch <- function(place, covid){
     for (i in 1:ng){
       ### parameters
       parm<-gridPar(gList[i,], infectDuration*eig)
-      vpar1["beta"] <-parm$beta1
-      vpar2["beta"] <-parm$beta2
+      betaList<-c(parm$beta1, parm$beta2)
       
       ### initial condition
       initNumIperType<<-parm$I0
@@ -111,19 +120,11 @@ gridSearch <- function(place, covid){
         vt <- seq(0,diff(TTTcali)[t],1) 
         
         # set contact matrix and parameter in each period
-        if (t==1){
-          Cmat <<-Cmat1
-          vpar_j<-vpar1
-        }else if (t==2){
-          Cmat <<-Cmat2
-          vpar_j<-vpar1
-        }else{
-          Cmat <<-Cmat2
-          vpar_j<-vpar2        
-        }
-        
+        CB <- setCmatBeta(gsPar, t, CmatList, betaList)
+        Cmat<<-CB$Cmat
+
         # RUN SIR
-        sim_j = as.data.frame(lsoda(inits, vt, SEIIRRD_model, vpar_j))
+        sim_j = as.data.frame(lsoda(inits, vt, SEIIRRD_model, CB$vpar))
         
         if (t>1){
           sim0<-rbind(sim0[1:TTTcali[t],], sim_j)
@@ -146,11 +147,11 @@ gridSearch <- function(place, covid){
     end_time <- Sys.time()
     print(end_time - start_time)
     
-    dead<-log(covid$deathper100k)
-    case<-log(covid$caseper100k)
+    dead<-covid$deathper100k
+    case<-covid$caseper100k
     if (ng>1){
       ## fit log death, min squared loss
-      err<-log(fitDeath) - matrix(1,ng,1)%*%dead
+      err<-fitDeath - matrix(1,ng,1)%*%dead
       sse<-rowSums(err[,tRange]^2)
       
       #best fit
@@ -165,12 +166,9 @@ gridSearch <- function(place, covid){
       
     ### plot comparison
     par(mfrow=c(1,1))
-    plot(covid$t, log(fitCase[gstar,]), type="l", ylim=c(-4,10))
-    lines(covid$t, case, type="l", lwd="2", col="blue")
-    lines(covid$t, dead, type="l", lwd="2", col="red")
-    lines(covid$t, log(fitDeath[gstar,]),type="l")
- 
-    abline(v=TTTcali[2], col="gray")
+    plot(covid$t-1, dead, type="l", lwd="2", col="red")
+    lines(covid$t-1, fitDeath[gstar,],type="l")
+    abline(v=c(gsPar$T2,gsPar$T3,min(tRange)+T1,max(tRange)+T1),col=c("gray","gray","black","black"))
     
     ## check within grid search boundary
     if(min((g0<ub) * (g0>lb))!=1){
@@ -186,13 +184,30 @@ gridSearch <- function(place, covid){
               " I0=",    format(parm$I0,digits=4),sep=""))
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   
+  # check earlier state, more immediate to tell if intervension is implemented properly
+  # plot(covid$t-1, extractState("E",sim0),type='l')
+  # abline(v=c(gsPar$T2,gsPar$T3,min(tRange)+T1,max(tRange)+T1),col=c("gray","gray","black","black"))
   
-  #export csv  
+  
+  #export csv
   parmOut<-matrix(c(parm$beta1,parm$beta2,parm$I0),1,3)
-  colnames(parmOut)<-c("beta1","beta2","I0") 
+  colnames(parmOut)<-c("beta1","beta2","I0")
   fn <- paste(parmPath, paste(caliParm, place, datv, ".csv", sep=""), sep="/")
   write.table(parmOut, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
   print(paste("export calibrated parameters :",fn))
+
+  #show calibration result
+  fn <- paste(outPath, "figure", 
+              paste('calibrate_beta_I0_msa', place, ".pdf", sep=""), sep="/")
+  pdf(fn)
+  plot(covid$t-1, fitDeath[gstar,],
+       xlab="", ylab="Log Death Per 100 000 of Population", lwd=1.5,
+       xaxt = "n", type="l",col="red", lty=5, cex.lab=psize)
+  axis(side  = 1, at = seq(0,max(covid$t),15))
+  lines(covid$t-1, dead, type="l", lwd=1.5, col="red")
+  abline(v=c(gsPar$T2,gsPar$T3,min(tRange)+T1,max(tRange)+T1),col=c("gray","gray","black","black"))
+  dev.off()
+  print(paste("  saved plot:",fn))
 }
 
 
@@ -211,4 +226,4 @@ for (m in msaList){
   gridSearch(m, covid)
 }
 
-rm(COVID, covid, Cmat, gridSearch)
+# rm(COVID, covid, Cmat, gridSearch)

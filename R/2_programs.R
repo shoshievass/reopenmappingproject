@@ -194,6 +194,7 @@ tagActiveEmp <- function(sim1) {
 
 # generate string policy tag names from indicator for definition of each contact level -------------------------------------
 policyTagString <- function(policyVec) {
+  policyVec <- matrix(policyVec, ncol=5)
   #load calibrated parameter file
   poli <-paste("_W",policyVec[,1],
                "-S",policyVec[,2],

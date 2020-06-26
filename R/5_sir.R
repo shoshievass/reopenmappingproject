@@ -85,6 +85,13 @@ for (m in msaList){
   # load calibrated parameters for this location
   par<-calibratedPar(m)
   
+  # load location input parameters
+  gsPar <- checkLoad(gsParm)
+  gsPar <- as.vector(gsPar[gsPar$msa==m,])
+  
+  # timing for 3 phases
+  TTT<<-c(gsPar$T1,gsPar$T2,gsPar$T3,gsPar$Tend)
+  
   # initial condition
   initNumIperType<<-par$I0
   
