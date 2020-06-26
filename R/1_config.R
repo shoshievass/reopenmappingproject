@@ -49,16 +49,19 @@ caliParm  <<- "calibrated_parm_msa"
 ### scenarios/place
 
 ## contact definition for 
-# W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), 
-# and M(mask), although M no impact on contact
+# W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), M(mask), although M no impact on contact
 contactPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:3)
+
+#NP, EO, CR, AS, WFH, 60+
+contactPolicy<<-rbind(c(4,3,3,2,3),c(1,1,1,2,2),c(4,3,1,2,2),c(3,2,1,2,2),c(2,3,1,2,2),c(4,3,1,1,2))
+# contactPolicy<<-rbind(c(4,3,3,2,2))
 policyList <<- policyTagString(contactPolicy)
 
 
 ## reference policies
 refPhase1 <<-"_W4-S3-N3-E2-M3"
 refPhase2 <<-"_W1-S1-N1-E2-M2"
-refPhase3 <<-"_W4-S3-N1-E2-M2"
+refPhase3 <<-"_W4-S3-N3-E2-M2"
 refPolicy <-c(refPhase1,refPhase2,refPhase3)
 
 
@@ -73,14 +76,15 @@ policyCombo<<-rbind(refPolicy,policyFull)
 # hard code parameters
 #####################################
 
-## time period of each phases with different policies
-TTT <<-c(0,15,75,150)
 
 ## MSAs
 # NYC, Chicago, Sacramento
 # msa  "5600", "1600", "6920"
-msaList<<-c("5600", "1600", "6920")
-msaList<<-c("6920")
+# msaList<<-c("5600", "1600", "6920")
+msaList<<-c("7240", "3360", "1920")
+
+
+msaList<<-c("3360")
 
 
 ## age number of 60
@@ -89,8 +93,6 @@ age60<<-4
 ## naics code for healthcare
 heathNAICS<<-62
 
-## time range of sample used for estimation
-rangeToT<<-60
 
 ## fix beta as counterfactual, 0 for varying beta, 1 for beta1 and 2 for beta2
 fixBETA  <<-0
@@ -114,7 +116,8 @@ datv<<-""
 outputSIR<<-0
 
 ## source of input for contact matrix
-Csource<<-list(msa5600="fred",msa1600="replica",msa6920="replica")
+Csource<<-list(msa5600="fred",msa7240="fred", msa3360="fred", msa1920="fred", msa640="fred", 
+               msa1600="replica",msa6920="replica")
 
 
 
@@ -148,7 +151,6 @@ GAMMA   <<-gammaD - DELTAhc    # recovery rate to account for variation in death
 typeAgeSick <<-as.matrix(PAR$age*10+PAR$sick)
 
 #wtd average duration of infected (not in the SIR model, a scaling factor in calibration exercise)
-# infectDuration<<-min(PAR$infectionDuration)
 infectDuration<<-psi * (1/mean(TAU)) + (1-psi) * (1/mean(TAU) + 1/gamma)
   
 # initial condition: number of people in I^A per type
