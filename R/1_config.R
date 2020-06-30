@@ -10,7 +10,7 @@
 #####################################
 ## check packages
 #####################################
-packages <- c("deSolve","plyr","dplyr","tidyr")
+packages <- c("deSolve","plyr","dplyr","tidyr","pracma")
 newPackages <- packages[!(packages %in% installed.packages()[,"Package"])]
 if(length(newPackages)) install.packages(newPackages)
 
@@ -18,7 +18,7 @@ library(deSolve)
 library(plyr)
 library(dplyr)
 library(tidyr)
-
+library(pracma)
 
 #####################################
 ## check input files
@@ -27,7 +27,7 @@ library(tidyr)
 ## user input file names
 
 # data for fitting death
-deathData <<- paste(dataPath,"covid_case_death_jh.csv",sep="/")
+deathData <<- paste(dataPath,"covid_case_death_jh_tx_pred.csv",sep="/")
 
 # SEIR model parameters
 seirParm  <<- paste(parmPath,"params.csv",sep="/")
@@ -48,28 +48,24 @@ caliParm  <<- "calibrated_parm_msa"
 #####################################
 ### scenarios/place
 
-## contact definition for 
-# W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), M(mask), although M no impact on contact
-contactPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:3)
 
-#NP, EO, CR, AS, WFH, 60+
-contactPolicy<<-rbind(c(4,3,3,2,3),c(1,1,1,2,2),c(4,3,1,2,2),c(3,2,1,2,2),c(2,3,1,2,2),c(4,3,1,1,2))
-# contactPolicy<<-rbind(c(4,3,3,2,2))
-policyList <<- policyTagString(contactPolicy)
-
-
-## reference policies
+## reference policies: NP, EO, NP(M2), NP(M2)
 refPhase1 <<-"_W4-S3-N3-E2-M3"
 refPhase2 <<-"_W1-S1-N1-E2-M2"
 refPhase3 <<-"_W4-S3-N3-E2-M2"
-refPolicy <-c(refPhase1,refPhase2,refPhase3)
+refPhase4 <<-"_W4-S3-N3-E2-M2"
 
 
-## combinations
-policyFull <- expand.grid(refPhase1,refPhase2, policyList, stringsAsFactors = FALSE)
+## contact definition for 
+# W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), M(mask), although M no impact on contact
 
+# all reopening policies
+reopenPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:3)
 
-policyCombo<<-rbind(refPolicy,policyFull)
+#NP, EO, CR, AS, WFH, 60+
+#reduced beta, normal beta, even lower beta
+reopenPolicy<<-rbind(c(4,3,3,2,2),c(1,1,1,2,2),c(4,3,1,2,2),c(3,2,1,2,2),c(2,3,1,2,2),c(4,3,1,1,2))
+policyCombo<<-genPolicy(reopenPolicy,refPhase1,refPhase2,refPhase3,refPhase4)
 
 
 #####################################
@@ -100,20 +96,21 @@ fixBETA  <<-0
 ## beta scale factor to test sensitivity
 scalBETA <<-1
 
-
+## t0
+TNAUGHT <<- as.Date(unique("3/5/2020"), "%m/%d/%Y")
 
 #####################################
 # input/output versions
 #####################################
 
 #output version
-ver <<-"_combo"
+verTag <<-"_combo"
 
 #input (data,contact matrix) version
 datv<<-""
 
 ### save results/plots?
-outputSIR<<-0
+outputSIR<<-1
 
 ## source of input for contact matrix
 Csource<<-list(msa5600="fred",msa7240="fred", msa3360="fred", msa1920="fred", msa640="fred", 

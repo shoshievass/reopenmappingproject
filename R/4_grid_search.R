@@ -79,13 +79,28 @@ gridSearch <- function(place, covid){
 
   ### time range of the sample used for estimation
   tRange<-seq(gsPar$T_range_start, gsPar$T_range_end)-T1
-
+  
+  #show several lines in calibration plot
+  tVertL<-c(gsPar$T2,gsPar$T3,min(tRange)+T1,max(tRange)+T1)
+  
+  ### fit log death or death
+  logD <- gsPar$logDeath
+  logTag <- ifelse(logD, "Log ", "")
+  
+  ### number of periods for predicted death
+  #   = 0 if not using predicted death to evaluate out of sample fit
+  TpredD <- gsPar$Toos_predDeath
+  
   ### no policy, essential only, and cautious reopening contact matrix
   CmatList <- list(loadData(place, refPhase1), 
                    loadData(place, refPhase2), 
                    loadData(place, refPhase3))
   eig<-largestEigenvalue(CmatList[[1]])
-
+  print(paste(" largest eigenvalue of contact matrices=", format(largestEigenvalue(CmatList[[1]]),digits=4),
+              format(largestEigenvalue(CmatList[[2]]),digits=4),
+              format(largestEigenvalue(CmatList[[3]]),digits=4)))
+  
+  
   ### lower/upper bound for beta1, beta2 and initial condition
   lb   <-unlist(gsPar[grep("lb",   gsCol, perl=T)])
   ub   <-unlist(gsPar[grep("ub",   gsCol, perl=T)])
@@ -147,10 +162,19 @@ gridSearch <- function(place, covid){
     end_time <- Sys.time()
     print(end_time - start_time)
     
+    
     dead<-covid$deathper100k
     case<-covid$caseper100k
+    
+    ## log transform of deaths/cases
+    if (logD==1){
+      dead<-log(dead)
+      case<-log(case)
+      fitDeath<-log(fitDeath)
+      fitCase <-log(fitCase)
+    }
     if (ng>1){
-      ## fit log death, min squared loss
+      ## fit death, min squared loss
       err<-fitDeath - matrix(1,ng,1)%*%dead
       sse<-rowSums(err[,tRange]^2)
       
@@ -165,10 +189,9 @@ gridSearch <- function(place, covid){
     parm<-gridPar(g0, infectDuration*eig)
       
     ### plot comparison
-    par(mfrow=c(1,1))
-    plot(covid$t-1, dead, type="l", lwd="2", col="red")
-    lines(covid$t-1, fitDeath[gstar,],type="l")
-    abline(v=c(gsPar$T2,gsPar$T3,min(tRange)+T1,max(tRange)+T1),col=c("gray","gray","black","black"))
+    par(mfrow=c(1,2))
+    plotCali(covid$t, dead, fitDeath[gstar,], 0, tVertL, logTag, TpredD)
+    plotCali(covid$t, case,  fitCase[gstar,], 1, tVertL, logTag, 0)
     
     ## check within grid search boundary
     if(min((g0<ub) * (g0>lb))!=1){
@@ -183,34 +206,24 @@ gridSearch <- function(place, covid){
               " beta2=", format(parm$beta2,digits=4),
               " I0=",    format(parm$I0,digits=4),sep=""))
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+
   
-  # check earlier state, more immediate to tell if intervension is implemented properly
-  # plot(covid$t-1, extractState("E",sim0),type='l')
-  # abline(v=c(gsPar$T2,gsPar$T3,min(tRange)+T1,max(tRange)+T1),col=c("gray","gray","black","black"))
-  
-  
-  #export csv
+  ### export csv
   parmOut<-matrix(c(parm$beta1,parm$beta2,parm$I0),1,3)
   colnames(parmOut)<-c("beta1","beta2","I0")
   fn <- paste(parmPath, paste(caliParm, place, datv, ".csv", sep=""), sep="/")
   write.table(parmOut, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
   print(paste("export calibrated parameters :",fn))
 
-  #show calibration result
-  fn <- paste(outPath, "figure", 
-              paste('calibrate_beta_I0_msa', place, ".pdf", sep=""), sep="/")
+  ### show calibration result
+  par(mfrow=c(1,1))
+  fn <- paste(outPath, "figure",
+              paste('calibrate_beta_I0_pred_d_msa', place, ".pdf", sep=""), sep="/")
   pdf(fn)
-  plot(covid$t-1, fitDeath[gstar,],
-       xlab="", ylab="Log Death Per 100 000 of Population", lwd=1.5,
-       xaxt = "n", type="l",col="red", lty=5, cex.lab=psize)
-  axis(side  = 1, at = seq(0,max(covid$t),15))
-  lines(covid$t-1, dead, type="l", lwd=1.5, col="red")
-  abline(v=c(gsPar$T2,gsPar$T3,min(tRange)+T1,max(tRange)+T1),col=c("gray","gray","black","black"))
+  plotCali(covid$t, dead, fitDeath[gstar,], 0, tVertL, logTag, TpredD)
   dev.off()
   print(paste("  saved plot:",fn))
 }
-
-
 
 
 ### load covid death and cases data
