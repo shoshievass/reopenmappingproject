@@ -194,7 +194,7 @@ tagActiveEmp <- function(sim1) {
 
 # generate string policy tag names from indicator for definition of each contact level -------------------------------------
 policyTagString <- function(policyVec) {
-  policyVec <- matrix(policyVec, ncol=5)
+  policyVec <- matrix(as.matrix(policyVec), ncol=5)
   #load calibrated parameter file
   poli <-paste("_W",policyVec[,1],
                "-S",policyVec[,2],
@@ -211,6 +211,32 @@ parsePolicyTag <- function(policyTag, poli) {
   #load calibrated parameter file
   pos <- gregexpr(poli,refPhase1)[[1]][1] + 1
   return(as.numeric(substr(policyTag, pos, pos)))
+}
+
+# enumerate all policies to plot, including references  -------------------------------------
+genPolicy <- function(reopenPolicy,refPhase1,refPhase2,refPhase3,refPhase4) {
+  policyList <<- policyTagString(reopenPolicy)
+  
+  ## reference policies: 
+  refPolicy <-c(refPhase1,refPhase2,refPhase3,refPhase4)
+  
+  ## policy combo with reference policies need to plot areas
+  refPolicyAreaPlot <-unname(rbind(refPolicy,
+                                   c(refPhase1,refPhase1,refPhase1,refPhase1),
+                                   c(refPhase1,refPhase2,refPhase2,refPhase2),
+                                   c(refPhase1,refPhase2,refPhase3,refPhase3)))
+  
+  
+  ## combinations of reference and reopen policy in the last phase
+  policyFull <- unname(expand.grid(refPhase1,refPhase2,refPhase3,policyList,stringsAsFactors=FALSE))
+  
+  ## all policy combo to plot
+  policyCombo<<-rbind(refPolicy, 
+                      c(refPhase1,refPhase1,refPhase1,refPhase1),
+                      c(refPhase1,refPhase2,refPhase2,refPhase2),
+                      c(refPhase1,refPhase2,refPhase3,refPhase3),
+                      policyFull)
+  return(policyCombo)
 }
 
 
@@ -336,6 +362,41 @@ calOutcome<-function(simRun){
 #### plot/output functions 
 #####################################
 
+# plot fit in caliration -----------------------------------------------------
+plotCali <- function(t, xdata, xfit, DC, tVertL, logTag, TpredD) {
+  
+  if (DC==0){
+    ylbl <- paste(logTag, "Death Per 100 000 of Population")
+  }else{
+    ylbl <- paste(logTag, "Case Per 100 000 of Population")    
+  }
+  nt<-length(t)
+  
+  
+  ### plot fit
+  plot(t-1, xfit, 
+       ylim=c(min(0, min(xdata, na.rm=TRUE),min(xfit, na.rm=TRUE)), max(max(xdata, na.rm=TRUE),max(xfit, na.rm=TRUE))), 
+       xlab="", ylab=ylbl, 
+       lwd=1.5, xaxt = "n", type="l",col="red", lty=5, cex.lab=psize)
+  # x-axis show dates
+  t2show<-seq(0,max(t),10)
+  axis(side  = 1, at = t2show, label=format(t2show+TNAUGHT, "%m/%d"))
+  
+  ### plot data
+  if (TpredD>0){
+    lines(t[(nt-TpredD):nt]-1, 
+          xdata[(nt-TpredD):nt], type="b", lwd=1.5, col="red",lty=4)
+  }
+  lines(t[1:(nt-TpredD) ]-1, 
+          xdata[1:(nt-TpredD) ], type="l", lwd=1.5, col="red")
+  
+  ### indicate key dates
+  abline(v=tVertL,col=c("gray","gray","black","black"))
+  
+}
+
+
+
 # plot SIR -----------------------------------------------------
 plotSIR <- function(sim1,sim2) {
   
@@ -379,7 +440,7 @@ plotSIRHealth <- function(sim1,sim2) {
   
   # primary outputs
   plot(0:TT,extractSeveralState(what2plot[[1]],sim1)
-       ,type="l",ylab="Percent of population",xlab="",ylim=c(0,40),lwd=2,col=mycol[colvec[1]])
+       ,type="l",ylab="Percent of population",xlab="",lwd=2,col=mycol[colvec[1]])
   plotSeveralLines(what2plot[-1],colvec[-1],sim1,1)
   
   
@@ -393,7 +454,7 @@ plotSIRHealth <- function(sim1,sim2) {
   # death on secondary axis
   par(new = T)
   plot(0:TT,extractState("D",sim1),type="l",lwd=2,col=mycol[5],
-       ylim=c(0,0.8), axes=F, xlab=NA, ylab=NA)
+       axes=F, xlab=NA, ylab=NA)
   # secondary outputs
   if (min(is.na(sim2))==0){
     lines(0:TT,extractState("D",sim2),type="l",lty=2,lwd=2,col=mycol[mycolLength+5])
@@ -409,8 +470,9 @@ plotSIRHealth <- function(sim1,sim2) {
 
 # indicate start of policy intervention and reopen  -----------------------------------------------------
 timingVerticalLine <- function(coltxt) {
-  abline(v=TTT[2], col=coltxt)
-  abline(v=TTT[3], col=coltxt)
+  for (i in 2:(length(TTT)-1)){
+    abline(v=TTT[i], col=coltxt)
+  }
 }
 
 
@@ -434,7 +496,7 @@ plotIbyNaics <- function(sim1) {
     )
     if (i==1){
       plot(0:TT,I
-           ,type="l",ylab="Percent infected",xlab="",ylim=c(0,80),lwd=2,col=mycol[i])
+           ,type="l",ylab="Percent infected",xlab="",lwd=2,col=mycol[i])
     }else{
       lines(0:TT,I,type='l',lwd=2,col=mycol[i])
     }
@@ -480,7 +542,9 @@ exportSIR <- function(sim1,place,contact,pcombo) {
     # export csv
     fn <- paste(outPath, "csv", 
                 paste("sir_", compartList[j], "_" ,
-                      place, pcombo, ver, ".csv", sep=""), sep="/")
+                      place, pcombo, 
+                      "_T", paste(TTT[-1], collapse="-"), 
+                      verTag, ".csv", sep=""), sep="/")
     write.table(cbind(out,outj), file=fn,sep=",",col.names=TRUE,row.names=FALSE)
     print(paste("  export output:",fn))
   }
@@ -492,19 +556,19 @@ exportSIR <- function(sim1,place,contact,pcombo) {
 packagePlot <- function(sim1,place,contact, sim2) {
   
   ### produce plots
-  fn <- paste(outPath, "figure", paste('SIR_dcm_', place, contact, ver, ".png", sep=""), sep="/")
+  fn <- paste(outPath, "figure", paste('SIR_dcm_', place, contact, verTag, ".png", sep=""), sep="/")
   png(fn)
   plotSIR(sim1,sim2)
   dev.off()
   print(paste("  saved plot:",fn))
   
-  fn <- paste(outPath, "figure", paste('SIR2_dcm_', place, contact, ver, ".png", sep=""), sep="/")
+  fn <- paste(outPath, "figure", paste('SIR2_dcm_', place, contact, verTag, ".png", sep=""), sep="/")
   png(fn)
   plotSIRHealth(sim1,sim2)
   dev.off()
   print(paste("  saved plot:",fn))
   
-  fn <- paste(outPath, "figure", paste('Infected_naics_dcm_', place, contact, ver, ".png", sep=""), sep="/")
+  fn <- paste(outPath, "figure", paste('Infected_naics_dcm_', place, contact, verTag, ".png", sep=""), sep="/")
   png(fn)
   plotIbyNaics(sim1)
   dev.off()

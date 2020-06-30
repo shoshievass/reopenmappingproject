@@ -12,7 +12,7 @@
 run_sir <- function(place, policy, par, sim_ref){
   sim0<-NA
   # for each of three phases
-  for (j in 1:3){
+  for (j in 1:4){
     contact <- as.vector(policy[[j]])
     # load contact matrix from synthetic population
     Cmat<<-loadData(place, contact)
@@ -43,8 +43,8 @@ run_sir <- function(place, policy, par, sim_ref){
     stopifnot(abs(min(check)-max(check))<0.1)
     
     # organize outputs across three phasess
-    if (j==3){
-      pcombo<-paste(policy[[1]], policy[[2]], policy[[3]], sep="")
+    if (j==4){
+      pcombo<-paste(policy[[1]], policy[[2]], policy[[3]], policy[[4]], sep="")
       # generate plot/csv outputs
       if (outputSIR==1){
         exportSIR(sim0,place,contact,pcombo)
@@ -70,7 +70,7 @@ run_sir <- function(place, policy, par, sim_ref){
 start_time <- Sys.time()
 
 # aggregate key outputs
-df <- data.frame(Policy1=character(),Policy2=character(),Policy3=character(),
+df <- data.frame(Policy1=character(),Policy2=character(),Policy3=character(),Policy4=character(),
                  MSA=character(), 
                  BaselineAdjDeaths=numeric(), 
                  BaselineAdjEmpHours=numeric(), 
@@ -89,8 +89,12 @@ for (m in msaList){
   gsPar <- checkLoad(gsParm)
   gsPar <- as.vector(gsPar[gsPar$msa==m,])
   
-  # timing for 3 phases
-  TTT<<-c(gsPar$T1,gsPar$T2,gsPar$T3,gsPar$Tend)
+  # timing for 4 phases
+  TTT<<-c(0,
+          gsPar$T2-gsPar$T1,
+          gsPar$T3-gsPar$T1,
+          gsPar$T4-gsPar$T1,
+          gsPar$Tend)
   
   # initial condition
   initNumIperType<<-par$I0
@@ -99,7 +103,10 @@ for (m in msaList){
   for (i in 1:dim(policyCombo)[1]){
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     print(paste("!! Running SIR for policy combo", i,"/", dim(policyCombo)[1], ":", 
-                policyCombo[i,1], policy[i,2], policy[i,3], "at MSA", m, "......!!"))
+                policyCombo[i,1], 
+                policyCombo[i,2], 
+                policyCombo[i,3], 
+                policyCombo[i,4], "at MSA", m, "......!!"))
     
     if (i==1){
       #the first is reference policies in each MSA
