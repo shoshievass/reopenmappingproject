@@ -54,18 +54,82 @@ setCmatBeta <- function(gsPar, t, CmatList, betaList){
   return(list(Cmat=CmatList[[cmatVer]], vpar=vpar))
 }
 
+
+# plot fit in caliration -----------------------------------------------------
+plotCali <- function(xdata, xfit, DC, tVertL, logTag, TpredD) {
+  
+  if (length(xdata)!=length(xfit)){
+    stop("data and predicted series do not have the same length!")
+  }
+  nt<-length(xdata)
+  t<-0:(nt-1)
+  
+  ### plot cases or deaths
+  if (DC==0){
+    ylbl <- paste(logTag, "Death Per 100 000 of Population")
+  }else{
+    ylbl <- paste(logTag, "Case Per 100 000 of Population")    
+  }
+  
+  ### plot fit
+  xdata_finite <- xdata[is.finite(xdata)]
+  xfit_finite  <- xfit[is.finite(xfit)]
+  plot(t, xfit, 
+       ylim=c(min(0, min(xdata_finite),min(xfit_finite)), max(max(xdata_finite), max(xfit_finite))), 
+       xlab="", ylab=ylbl, 
+       lwd=1.5, xaxt = "n", type="l",col="red", lty=5, cex.lab=psize)
+  # x-axis show dates
+  t2show<-seq(0,max(t),10)
+  axis(side  = 1, at = t2show, label=format(t2show+TNAUGHT, "%m/%d"))
+  
+  ### include predicted death using cases
+  if (TpredD>0){
+    if (DC==1){
+      stop("we cannot predict cases")
+    }
+    lines(t[(nt-TpredD):nt], 
+          xdata[(nt-TpredD):nt], type="b", lwd=1.5, col="red",lty=4)
+  }
+  lines(t[1:(nt-TpredD) ], 
+        xdata[1:(nt-TpredD)], type="l", lwd=1.5, col="red")
+  
+  ### indicate key dates
+  abline(v=tVertL,col=c("gray","gray","black","black"))
+  
+}
+
+
+### use case to death ratio to predict death for an additional couple of days
+casePredDeath <- function(covid, TpredD){
+  
+  # death_{t+TpredD}=b * case_t, 
+  nt<-length(covid$t)
+  y <- covid$deathper100k[(TpredD+1):nt]
+  x <- covid$caseper100k[1:(nt-TpredD)]
+  b <- as.double(solve(t(x)%*%x,  t(x)%*%y))
+  
+  # predicted death
+  yhat<-b * covid$caseper100k
+  
+  #append predicted to actual death
+  delta<-yhat[nt-TpredD] - covid$deathper100k[nt]
+  yhatAdj <- yhat[(nt-TpredD+1):nt] - delta
+  return(c(covid$deathper100k, yhatAdj))
+}
+
+
 ##########################################################################
 ######## main function for grid search 
 ##########################################################################
-gridSearch <- function(place, covid){
+gridSearch <- function(m, covid){
   
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-  print(paste("!! Starting grid search for MSA", place))
+  print(paste("!! Starting grid search for MSA", m))
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
   ### grid search input parmaeter
   gsPar <- checkLoad(gsParm)
-  gsPar <- as.vector(gsPar[gsPar$msa==place,])
+  gsPar <- as.vector(gsPar[gsPar$msa==m,])
   gsCol <- names(gsPar)
 
   #number of time periods
@@ -73,9 +137,13 @@ gridSearch <- function(place, covid){
   covid<-covid[covid$t>T1,]
   nt<-dim(covid)[1]
   
+  ### number of periods for predicted death
+  #   = 0 if not using predicted death to evaluate out of sample fit
+  TpredD <- gsPar$Toos_predDeath
+  
   ### timing
-  ### start/end time of each phase: phase 1, phase 2 with beta1, phase 2 with beta2
-  TTTcali <-c(0,gsPar$caliT2-T1,gsPar$caliT3-T1,nt-1)
+  ### start/end time of each phase
+  TTTcali <-c(0,gsPar$caliT2-T1,gsPar$caliT3-T1,nt-1+TpredD)
 
   ### time range of the sample used for estimation
   tRange<-seq(gsPar$T_range_start, gsPar$T_range_end)-T1
@@ -84,19 +152,28 @@ gridSearch <- function(place, covid){
   tVertL<-c(gsPar$T2,gsPar$T3,min(tRange)+T1,max(tRange)+T1)
   
   ### fit log death or death
-  logD <- gsPar$logDeath
+  logD   <- gsPar$logDeath
   logTag <- ifelse(logD, "Log ", "")
   
-  ### number of periods for predicted death
-  #   = 0 if not using predicted death to evaluate out of sample fit
-  TpredD <- gsPar$Toos_predDeath
+  ### death and cases in the data
+  dead<-covid$deathper100k
+  case<-covid$caseper100k
+  if (TpredD>0){
+    dead <- casePredDeath(covid, TpredD)
+  }
+  ## log transform of deaths/cases
+  if (logD==1){
+    dead<-log(dead)
+    case<-log(case)
+  }
   
   ### no policy, essential only, and cautious reopening contact matrix
-  CmatList <- list(loadData(place, refPhase1), 
-                   loadData(place, refPhase2), 
-                   loadData(place, refPhase3))
+  CmatList <- list(loadData(m, refPhase1), 
+                   loadData(m, refPhase2), 
+                   loadData(m, refPhase3))
   eig<-largestEigenvalue(CmatList[[1]])
-  print(paste(" largest eigenvalue of contact matrices=", format(largestEigenvalue(CmatList[[1]]),digits=4),
+  print(paste(" largest eigenvalue of contact matrices=", 
+              format(largestEigenvalue(CmatList[[1]]),digits=4),
               format(largestEigenvalue(CmatList[[2]]),digits=4),
               format(largestEigenvalue(CmatList[[3]]),digits=4)))
   
@@ -114,15 +191,15 @@ gridSearch <- function(place, covid){
     ### grid
     gList<-gridPoints(lb, ub, step, j, g0)
     
-    ### placeholder for simulated death/case
+    ### mholder for simulated death/case
     ng<-dim(gList)[1]
-    fitDeath<-matrix(0,ng,nt)
-    fitCase <-matrix(0,ng,nt)
+    fitDeath<-matrix(0,ng,nt+TpredD)
+    fitCase <-matrix(0,ng,nt+TpredD)
     
     start_time <- Sys.time()
     for (i in 1:ng){
       ### parameters
-      parm<-gridPar(gList[i,], infectDuration*eig)
+      parm    <-gridPar(gList[i,], infectDuration*eig)
       betaList<-c(parm$beta1, parm$beta2)
       
       ### initial condition
@@ -162,42 +239,30 @@ gridSearch <- function(place, covid){
     end_time <- Sys.time()
     print(end_time - start_time)
     
-    
-    dead<-covid$deathper100k
-    case<-covid$caseper100k
-    
-    ## log transform of deaths/cases
+    ### log transform of deaths/cases
     if (logD==1){
-      dead<-log(dead)
-      case<-log(case)
       fitDeath<-log(fitDeath)
       fitCase <-log(fitCase)
     }
-    if (ng>1){
-      ## fit death, min squared loss
-      err<-fitDeath - matrix(1,ng,1)%*%dead
-      sse<-rowSums(err[,tRange]^2)
-      
-      #best fit
-      gstar<-which.min(sse)
-    }else{
-      gstar<-1
-    }
+    ## fit death, min squared loss
+    err<-fitDeath - matrix(1,ng,1)%*%dead
+    sse<-rowSums(err[,tRange]^2)
     
-    #optimized parameter
+    #best fit
+    gstar<-which.min(sse)
     g0<-as.double(gList[gstar,])
     parm<-gridPar(g0, infectDuration*eig)
       
     ### plot comparison
     par(mfrow=c(1,2))
-    plotCali(covid$t, dead, fitDeath[gstar,], 0, tVertL, logTag, TpredD)
-    plotCali(covid$t, case,  fitCase[gstar,], 1, tVertL, logTag, 0)
+    plotCali(dead, fitDeath[gstar,], 0, tVertL, logTag, TpredD)
+    plotCali(case,  fitCase[gstar,1:nt], 1, tVertL, logTag, 0)
     
     ## check within grid search boundary
     if(min((g0<ub) * (g0>lb))!=1){
       print(rbind(lb,g0,ub))
+      stop("grid search hit boundary")
     }
-    stopifnot(min((g0<ub) * (g0>lb))==1)
   }
   
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -208,19 +273,20 @@ gridSearch <- function(place, covid){
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
   
-  ### export csv
+  ### export calibration results as csv
   parmOut<-matrix(c(parm$beta1,parm$beta2,parm$I0),1,3)
   colnames(parmOut)<-c("beta1","beta2","I0")
-  fn <- paste(parmPath, paste(caliParm, place, datv, ".csv", sep=""), sep="/")
+  fn <- file.path(calibratedParPath, paste(caliParm, m, datv, ".csv", sep=""))
   write.table(parmOut, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
   print(paste("export calibrated parameters :",fn))
 
-  ### show calibration result
+  
+  ### plot calibration result
+  pname<-ifelse(TpredD>0, "calibrate_beta_I0_pred_d_msa", "calibrate_beta_I0_msa")
   par(mfrow=c(1,1))
-  fn <- paste(outPath, "figure",
-              paste('calibrate_beta_I0_pred_d_msa', place, ".pdf", sep=""), sep="/")
+  fn <- file.path(outPath, "figure", paste(pname, m, ".pdf", sep=""))
   pdf(fn)
-  plotCali(covid$t, dead, fitDeath[gstar,], 0, tVertL, logTag, TpredD)
+  plotCali(dead, fitDeath[gstar,], 0, tVertL, logTag, TpredD)
   dev.off()
   print(paste("  saved plot:",fn))
 }
@@ -239,4 +305,4 @@ for (m in msaList){
   gridSearch(m, covid)
 }
 
-# rm(COVID, covid, Cmat, gridSearch)
+rm(COVID, covid, Cmat, gridSearch)

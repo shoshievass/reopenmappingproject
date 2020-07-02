@@ -116,11 +116,11 @@ for (m in msaList){
   ### load data
   #####################################
   # load contact
-  fn<- paste(dataPath, paste("contact_msa", m, "_", getCmatSource(m), ".csv",sep=""), sep="/")
+  fn<- file.path(dataPath, paste("contact_msa", m, "_", getCmatSource(m), ".csv",sep=""))
   C <-checkLoad(fn)
   
   # load types
-  TYPE <-checkLoad(paste(dataPath, "msa_type.csv", sep="/"))
+  TYPE <-checkLoad(file.path(dataPath, "msa_type.csv"))
   TYPE <-TYPE[TYPE$msa==m,!(colnames(TYPE) %in% c("msaname"))]
   
   # types for individual i and j
@@ -202,7 +202,10 @@ for (m in msaList){
       Cmat$age_i, Cmat$naics_i, Cmat$sick_i, Cmat$wfh_i, Cmat$shift_i, drop = TRUE, lex.order = TRUE))
     Cmat$rate <- as.integer(interaction(
       Cmat$age_j, Cmat$naics_j, Cmat$sick_j, Cmat$wfh_j, Cmat$shift_j, drop = TRUE, lex.order = TRUE))
-    
+    if(length(unique(Cmat$ego)) != length(unique(Cmat$rate))){
+      stop("focal and target types in the contact matrix need to be the same!")
+    }
+
     #reshape long to wide
     Cmat2 <- Cmat[,!(colnames(Cmat) %in% paste(typeVec,"j",sep="_"))] %>% 
       spread(key=rate, value=contact,sep="", fill = 0) %>% 
@@ -211,11 +214,13 @@ for (m in msaList){
     #check dimensions, 
     #there are 8 additional columns for number of people, active work status, 
     #5 types columns and 1 indicator for all posible types
-    stopifnot((dim(Cmat2)[2]-dim(Cmat2)[1])==(length(typeVec)+3))
+    if ((dim(Cmat2)[2]-dim(Cmat2)[1])!=(length(typeVec)+3)){
+      stop("contact matrix dimensions do not match")
+    }
     
-    #export csv
-    fn <- paste(dataPath, 
-                paste(ctMatData, m, "_", policy, datv, ".csv", sep=""), sep="/")
+    #export contact matrix csv
+    fn <- file.path(contactMatrixPath, 
+                paste(ctMatData, m, "_", policy, datv, ".csv", sep=""))
     write.table(Cmat2, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
     print(paste("export contact matrix:",fn))
     
@@ -239,8 +244,8 @@ for (m in msaList){
   }
   
   #export aggregate contact matrix by age
-  fn <- paste(outPath, 
-              paste(ctMatData, m, "_allPolicy", datv, ".csv", sep=""), sep="/")
+  fn <- file.path(outPath, 
+              paste(ctMatData, m, "_allPolicy", datv, ".csv", sep=""))
   write.table(CmatAll, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
   print(paste("aggregate contact matrix:",fn))
   
