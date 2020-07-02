@@ -15,25 +15,28 @@ dir<-dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(dir)
 setwd('..')
 proj<-getwd()
-dataPath <- paste(proj, "data", sep="/")
-codePath <- paste(proj, "R",    sep="/")
-outPath  <- paste(proj, "output", sep="/")
-parmPath <- paste(proj, "parameter", sep="/")
+dataPath <- file.path(proj, "data")
+tempPath <- file.path(proj, "temp")
+contactMatrixPath <- file.path(tempPath, "contactmatrix")
+calibratedParPath <- file.path(tempPath, "calibratedparameter")
+codePath <- file.path(proj, "R")
+outPath  <- file.path(proj, "output")
+parmPath <- file.path(proj, "parameter")
 
 #check if project directory is properly set up
 stopifnot(endsWith(proj, "reopenmappingproject"))
 
 
 ## set up global variables and functions
-source(paste(codePath,"2_programs.R",sep='/'))
+source(file.path(codePath,"2_programs.R"))
 source(getCodePath("1_config.R"))
 
 
 ## generate contact matrix
-source(getCodePath("3_gen_contact.R"))
+# source(getCodePath("3_gen_contact.R"))
 
 ## run grid search 
 source(getCodePath("4_grid_search.R"))
 
 ## run SIR
-source(getCodePath("5_sir.R"))
+# source(getCodePath("5_sir.R"))

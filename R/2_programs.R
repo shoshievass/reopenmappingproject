@@ -117,7 +117,8 @@ initialCondition <- function(fromT,sim0) {
 # load previously calibrated parameters
 calibratedPar <- function(place) {
   #load calibrated parameter file
-  fn <- paste(parmPath, paste(caliParm, place, datv, ".csv", sep=""), sep="/")
+  fn <- file.path(calibratedParPath, 
+                  paste(caliParm, place, datv, ".csv", sep=""))
   pData <-checkLoad(fn)
   
   ## extract parameters
@@ -133,9 +134,8 @@ calibratedPar <- function(place) {
 loadData <- function(place,contact) {
   
   # load files
-  fn <- paste(dataPath, 
-              paste(ctMatData, place, contact, datv, ".csv", sep=""),
-              sep="/")
+  fn <- file.path(contactMatrixPath, 
+              paste(ctMatData, place, contact, datv, ".csv", sep=""))
   CData <-checkLoad(fn)
 
   
@@ -171,9 +171,10 @@ checkLoad <- function(fn) {
 
 # get code directory  -----------------------------------------------------
 getCodePath <- function(filename){
-  out <- paste(codePath,filename,sep='/')
+  out <- file.path(codePath,filename)
   return(out)
 }
+
 
 # get contact matrix data source  -----------------------------------------------------
 getCmatSource <- function(m){
@@ -362,38 +363,6 @@ calOutcome<-function(simRun){
 #### plot/output functions 
 #####################################
 
-# plot fit in caliration -----------------------------------------------------
-plotCali <- function(t, xdata, xfit, DC, tVertL, logTag, TpredD) {
-  
-  if (DC==0){
-    ylbl <- paste(logTag, "Death Per 100 000 of Population")
-  }else{
-    ylbl <- paste(logTag, "Case Per 100 000 of Population")    
-  }
-  nt<-length(t)
-  
-  
-  ### plot fit
-  plot(t-1, xfit, 
-       ylim=c(min(0, min(xdata, na.rm=TRUE),min(xfit, na.rm=TRUE)), max(max(xdata, na.rm=TRUE),max(xfit, na.rm=TRUE))), 
-       xlab="", ylab=ylbl, 
-       lwd=1.5, xaxt = "n", type="l",col="red", lty=5, cex.lab=psize)
-  # x-axis show dates
-  t2show<-seq(0,max(t),10)
-  axis(side  = 1, at = t2show, label=format(t2show+TNAUGHT, "%m/%d"))
-  
-  ### plot data
-  if (TpredD>0){
-    lines(t[(nt-TpredD):nt]-1, 
-          xdata[(nt-TpredD):nt], type="b", lwd=1.5, col="red",lty=4)
-  }
-  lines(t[1:(nt-TpredD) ]-1, 
-          xdata[1:(nt-TpredD) ], type="l", lwd=1.5, col="red")
-  
-  ### indicate key dates
-  abline(v=tVertL,col=c("gray","gray","black","black"))
-  
-}
 
 
 
@@ -540,11 +509,11 @@ exportSIR <- function(sim1,place,contact,pcombo) {
     colnames(outj)<-paste("T",c(0:(TT-1)),sep="")
     
     # export csv
-    fn <- paste(outPath, "csv", 
+    fn <- file.path(outPath, "csv", 
                 paste("sir_", compartList[j], "_" ,
                       place, pcombo, 
                       "_T", paste(TTT[-1], collapse="-"), 
-                      verTag, ".csv", sep=""), sep="/")
+                      verTag, ".csv", sep=""))
     write.table(cbind(out,outj), file=fn,sep=",",col.names=TRUE,row.names=FALSE)
     print(paste("  export output:",fn))
   }
@@ -556,19 +525,19 @@ exportSIR <- function(sim1,place,contact,pcombo) {
 packagePlot <- function(sim1,place,contact, sim2) {
   
   ### produce plots
-  fn <- paste(outPath, "figure", paste('SIR_dcm_', place, contact, verTag, ".png", sep=""), sep="/")
+  fn <- file.path(outPath, "figure", paste('SIR_dcm_', place, contact, verTag, ".png", sep=""))
   png(fn)
   plotSIR(sim1,sim2)
   dev.off()
   print(paste("  saved plot:",fn))
   
-  fn <- paste(outPath, "figure", paste('SIR2_dcm_', place, contact, verTag, ".png", sep=""), sep="/")
+  fn <- file.path(outPath, "figure", paste('SIR2_dcm_', place, contact, verTag, ".png", sep=""))
   png(fn)
   plotSIRHealth(sim1,sim2)
   dev.off()
   print(paste("  saved plot:",fn))
   
-  fn <- paste(outPath, "figure", paste('Infected_naics_dcm_', place, contact, verTag, ".png", sep=""), sep="/")
+  fn <- file.path(outPath, "figure", paste('Infected_naics_dcm_', place, contact, verTag, ".png", sep=""))
   png(fn)
   plotIbyNaics(sim1)
   dev.off()

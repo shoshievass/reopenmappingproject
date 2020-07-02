@@ -9,10 +9,10 @@
 
 
 ### wraper function for running SIR under one policy combination 
-run_sir <- function(place, policy, par, sim_ref){
+runSir <- function(place, policy, par, simRef){
   sim0<-NA
   # for each of three phases
-  for (j in 1:4){
+  for (j in 1:NumPhase){
     contact <- as.vector(policy[[j]])
     # load contact matrix from synthetic population
     Cmat<<-loadData(place, contact)
@@ -43,12 +43,13 @@ run_sir <- function(place, policy, par, sim_ref){
     stopifnot(abs(min(check)-max(check))<0.1)
     
     # organize outputs across three phasess
-    if (j==4){
-      pcombo<-paste(policy[[1]], policy[[2]], policy[[3]], policy[[4]], sep="")
+    if (j==NumPhase){
+      pcombo<-paste(policy[1:NumPhase], collapse="" )
+        
       # generate plot/csv outputs
       if (outputSIR==1){
         exportSIR(sim0,place,contact,pcombo)
-        packagePlot(sim0,place,pcombo,sim_ref)
+        packagePlot(sim0,place,pcombo,simRef)
       }else{
         # plot SIR output, not save
         par(mfrow=c(2,2))
@@ -96,24 +97,26 @@ for (m in msaList){
           gsPar$T4-gsPar$T1,
           gsPar$Tend)
   
+  # number of phases
+  # we allow 3 or 4 different phases, 
+  # if T4 = Tend, then we run 3 phases, ow we run 4
+  NumPhase<<-ifelse(gsPar$T4==gsPar$Tend, 3, 4)
+  
   # initial condition
   initNumIperType<<-par$I0
   
   # for each policy combo
   for (i in 1:dim(policyCombo)[1]){
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    print(paste("!! Running SIR for policy combo", i,"/", dim(policyCombo)[1], ":", 
-                policyCombo[i,1], 
-                policyCombo[i,2], 
-                policyCombo[i,3], 
-                policyCombo[i,4], "at MSA", m, "......!!"))
+    print(paste("!! Running SIR for policy combo", i,"/", dim(policyCombo)[1], 
+                ":", paste(policyCombo[i,1:NumPhase], collapse=""),"at MSA", m, "......!!"))
     
     if (i==1){
       #the first is reference policies in each MSA
-      sim_ref<-run_sir(m, as.vector(policyCombo[i,]), par, NA)
-      outstats_ref<-calOutcome(sim_ref)
+      simRef<-runSir(m, as.vector(policyCombo[i,]), par, NA)
+      outstats_ref<-calOutcome(simRef)
     }else{
-      sim_i<-run_sir(m, as.vector(policyCombo[i,]), par, sim_ref)
+      sim_i<-runSir(m, as.vector(policyCombo[i,]), par, simRef)
       outstats_i<-calOutcome(sim_i)
       
       ## collect outputs
@@ -127,8 +130,8 @@ rm(Cmat, par)
 
 
 #export csv
-fn <- paste(outPath, 
-            paste("Agg_SIR", datv, ".csv", sep=""), sep="/")
+fn <- file.path(outPath, 
+            paste("Agg_SIR", datv, ".csv", sep=""))
 write.table(df, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
 print(paste("aggregate SIR outputs:",fn))
 

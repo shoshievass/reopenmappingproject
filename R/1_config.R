@@ -27,16 +27,16 @@ library(pracma)
 ## user input file names
 
 # data for fitting death
-deathData <<- paste(dataPath,"covid_case_death_jh_tx_pred.csv",sep="/")
+deathData <<- file.path(dataPath,"covid_case_death_jh.csv")
 
 # SEIR model parameters
-seirParm  <<- paste(parmPath,"params.csv",sep="/")
+seirParm  <<- file.path(parmPath,"params.csv")
 
 # contact matrix file names start with
 ctMatData <<- "C_msa"
 
 # inputs for grid search calibration
-gsParm <<- paste(parmPath, "gridsearch.csv",sep="/")
+gsParm <<- file.path(parmPath, "gridsearch.csv")
 
 # calibrated parameter name
 caliParm  <<- "calibrated_parm_msa"
@@ -60,7 +60,7 @@ refPhase4 <<-"_W4-S3-N3-E2-M2"
 # W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), M(mask), although M no impact on contact
 
 # all reopening policies
-reopenPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:3)
+contactPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:3)
 
 #NP, EO, CR, AS, WFH, 60+
 #reduced beta, normal beta, even lower beta
@@ -74,13 +74,10 @@ policyCombo<<-genPolicy(reopenPolicy,refPhase1,refPhase2,refPhase3,refPhase4)
 
 
 ## MSAs
-# NYC, Chicago, Sacramento
-# msa  "5600", "1600", "6920"
-# msaList<<-c("5600", "1600", "6920")
-msaList<<-c("7240", "3360", "1920")
-
-
-msaList<<-c("3360")
+# NYC, Chicago, Sacramento, Houston, Kansas City
+# msa  "5600", "1600", "6920","3360", "3760"
+# msaList<<-c("1600","6920","3760")
+msaList<<-c("5600")
 
 
 ## age number of 60
@@ -96,7 +93,7 @@ fixBETA  <<-0
 ## beta scale factor to test sensitivity
 scalBETA <<-1
 
-## t0
+## t0, starting time for SIR model
 TNAUGHT <<- as.Date(unique("3/5/2020"), "%m/%d/%Y")
 
 #####################################
@@ -113,8 +110,8 @@ datv<<-""
 outputSIR<<-1
 
 ## source of input for contact matrix
-Csource<<-list(msa5600="fred",msa7240="fred", msa3360="fred", msa1920="fred", msa640="fred", 
-               msa1600="replica",msa6920="replica")
+Csource<<-list(msa5600="fred",msa7240="fred", msa3360="fred", msa1920="fred",
+               msa1600="replica",msa6920="replica", msa3760="replica")
 
 
 
