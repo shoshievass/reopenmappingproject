@@ -98,7 +98,6 @@ plotCali <- function(xdata, xfit, DC, tVertL, logTag, TpredD) {
   
 }
 
-
 ### use case to death ratio to predict death for an additional couple of days
 casePredDeath <- function(covid, TpredD){
   
@@ -133,17 +132,18 @@ gridSearch <- function(m, covid){
   gsCol <- names(gsPar)
 
   #number of time periods
-  T1<-gsPar$T1
+  T1<-gsPar$T1; try(if(!between(T1, 0, gsPar$T2)) stop("T1 timing is off."))
+  
   covid<-covid[covid$t>T1,]
-  nt<-dim(covid)[1]
+  nt<-dim(covid)[1]; try(if(nt<1) stop("Too few days of data."))
   
   ### number of periods for predicted death
   #   = 0 if not using predicted death to evaluate out of sample fit
-  TpredD <- gsPar$Toos_predDeath
+  TpredD <- gsPar$Toos_predDeath; try(if(TpredD<0) stop("Error in num. periods predicted death."))
   
   ### timing
   ### start/end time of each phase
-  TTTcali <-c(0,gsPar$caliT2-T1,gsPar$caliT3-T1,nt-1+TpredD)
+  TTTcali <-c(0,gsPar$caliT2-T1,gsPar$caliT3-T1,nt-1+TpredD); try(if(gsPar$caliT2-T1<0) stop("Error in timing of periods."))
 
   ### time range of the sample used for estimation
   tRange<-seq(gsPar$T_range_start, gsPar$T_range_end)-T1
@@ -152,12 +152,12 @@ gridSearch <- function(m, covid){
   tVertL<-c(gsPar$T2,gsPar$T3,min(tRange)+T1,max(tRange)+T1)
   
   ### fit log death or death
-  logD   <- gsPar$logDeath
+  logD   <- gsPar$logDeath; try(if(!between(logD, 0, 1)) stop("Error in fitting deaths or log deaths."))
   logTag <- ifelse(logD, "Log ", "")
   
   ### death and cases in the data
-  dead<-covid$deathper100k
-  case<-covid$caseper100k
+  dead<-covid$deathper100k;  try(if(any(dead<0)) stop("Error in death data."))
+  case<-covid$caseper100k; try(if(any(case<0)) stop("Error in case data."))
   if (TpredD>0){
     dead <- casePredDeath(covid, TpredD)
   }
@@ -179,7 +179,7 @@ gridSearch <- function(m, covid){
   
   
   ### lower/upper bound for beta1, beta2 and initial condition
-  lb   <-unlist(gsPar[grep("lb",   gsCol, perl=T)])
+  lb   <-unlist(gsPar[grep("lb",   gsCol, perl=T)]);  try(if(any(lb[1:2]<0)) stop("Beta1 and Beta2 must be >=0."))
   ub   <-unlist(gsPar[grep("ub",   gsCol, perl=T)])
   step1<-unlist(gsPar[grep("step", gsCol, perl=T)])
   
@@ -203,7 +203,7 @@ gridSearch <- function(m, covid){
       betaList<-c(parm$beta1, parm$beta2)
       
       ### initial condition
-      initNumIperType<<-parm$I0
+      initNumIperType<<-parm$I0; try(if(initNumIperType<=0) stop("Error in initial amount of Infected."))
       
       ### for three periods phase 0-old beta, phase 1-old beta, phase 1-new beta
       sim0<-NA
@@ -256,7 +256,7 @@ gridSearch <- function(m, covid){
     ### plot comparison
     par(mfrow=c(1,2))
     plotCali(dead, fitDeath[gstar,], 0, tVertL, logTag, TpredD)
-    plotCali(case,  fitCase[gstar,1:nt], 1, tVertL, logTag, 0)
+    plotCali(case, fitCase[gstar,1:nt], 1, tVertL, logTag, 0)
     
     ## check within grid search boundary
     if(min((g0<ub) * (g0>lb))!=1){
