@@ -164,7 +164,7 @@ for (m in msaList){
     ################################################
     ### define contact under policy intervention
     ################################################
-    
+ 
     #work contact
     contactW <- workContact(Th, contactPolicy[p,1])   
     #school contact
