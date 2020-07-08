@@ -105,6 +105,11 @@ for (m in msaList){
   # initial condition
   initNumIperType<<-par$I0
   
+  #policy combo
+  policyCombo<<-genPolicy(NumPhase, reopenPolicy,refPhase1,refPhase2,refPhase3,refPhase4)
+  
+  
+  
   # for each policy combo
   for (i in 1:dim(policyCombo)[1]){
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -121,8 +126,9 @@ for (m in msaList){
       
       ## collect outputs
       dfRow<-dfRow+1
-      df[dfRow,]<-c(gsub("_","",policyCombo[i,]), 
-                   m, outstats_i[1:2]/outstats_ref[1:2]-1,outstats_i)
+      policy4<-c("","","","")
+      policy4[1:NumPhase]<-gsub("_","",policyCombo[i,])
+      df[dfRow,]<-c(policy4, m, outstats_i[1:2]/outstats_ref[1:2]-1,outstats_i)
     }
   }
 }

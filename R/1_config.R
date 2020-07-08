@@ -52,7 +52,7 @@ caliParm  <<- "calibrated_parm_msa"
 ## reference policies: NP, EO, NP(M2), NP(M2)
 refPhase1 <<-"_W4-S3-N3-E2-M3"
 refPhase2 <<-"_W1-S1-N1-E2-M2"
-refPhase3 <<-"_W4-S3-N3-E2-M2"
+refPhase3 <<-"_W4-S3-N1-E2-M2"
 refPhase4 <<-"_W4-S3-N3-E2-M2"
 
 
@@ -65,8 +65,6 @@ contactPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:3)
 #NP, EO, CR, AS, WFH, 60+
 #reduced beta, normal beta, even lower beta
 reopenPolicy<<-rbind(c(4,3,3,2,2),c(1,1,1,2,2),c(4,3,1,2,2),c(3,2,1,2,2),c(2,3,1,2,2),c(4,3,1,1,2))
-policyCombo<<-genPolicy(reopenPolicy,refPhase1,refPhase2,refPhase3,refPhase4)
-
 
 #####################################
 # hard code parameters
@@ -77,7 +75,7 @@ policyCombo<<-genPolicy(reopenPolicy,refPhase1,refPhase2,refPhase3,refPhase4)
 # NYC, Chicago, Sacramento, Houston, Kansas City
 # msa  "5600", "1600", "6920","3360", "3760"
 # msaList<<-c("1600","6920","3760")
-msaList<<-c("5600")
+msaList<<-c("1600")
 
 
 ## age number of 60
@@ -85,7 +83,6 @@ age60<<-4
 
 ## naics code for healthcare
 heathNAICS<<-62
-
 
 ## fix beta as counterfactual, 0 for varying beta, 1 for beta1 and 2 for beta2
 fixBETA  <<-0
@@ -107,11 +104,11 @@ verTag <<-"_combo"
 datv<<-""
 
 ### save results/plots?
-outputSIR<<-1
+outputSIR<<-0
 
 ## source of input for contact matrix
-Csource<<-list(msa5600="fred",msa7240="fred", msa3360="fred", msa1920="fred",
-               msa1600="replica",msa6920="replica", msa3760="replica")
+Csource<<-list(msa5600="fred", msa7240="fred", msa3360="fred", msa1920="fred",
+               msa1600="replica", msa6920="replica", msa3760="replica")
 
 
 
@@ -151,9 +148,9 @@ infectDuration<<-psi * (1/mean(TAU)) + (1-psi) * (1/mean(TAU) + 1/gamma)
 initNumIperType<<-1
 
 
-#####################################
-### global variables for plots
-#####################################
+#########################################################
+### global variables for plots for internal testing
+#########################################################
 
 #industry to plot
 naics2plot<<-c(31,42,44,52,54,62,72)

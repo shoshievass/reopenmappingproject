@@ -210,33 +210,41 @@ policyTagString <- function(policyVec) {
 # extract policy indciator  -------------------------------------
 parsePolicyTag <- function(policyTag, poli) {
   #load calibrated parameter file
-  pos <- gregexpr(poli,refPhase1)[[1]][1] + 1
+  pos <- gregexpr(poli,policyTag)[[1]][1] + 1
   return(as.numeric(substr(policyTag, pos, pos)))
 }
 
 # enumerate all policies to plot, including references  -------------------------------------
-genPolicy <- function(reopenPolicy,refPhase1,refPhase2,refPhase3,refPhase4) {
+genPolicy <- function(NumPhase, reopenPolicy,refPhase1,refPhase2,refPhase3,refPhase4) {
   policyList <<- policyTagString(reopenPolicy)
   
-  ## reference policies: 
-  refPolicy <-c(refPhase1,refPhase2,refPhase3,refPhase4)
-  
-  ## policy combo with reference policies need to plot areas
-  refPolicyAreaPlot <-unname(rbind(refPolicy,
-                                   c(refPhase1,refPhase1,refPhase1,refPhase1),
-                                   c(refPhase1,refPhase2,refPhase2,refPhase2),
-                                   c(refPhase1,refPhase2,refPhase3,refPhase3)))
-  
-  
-  ## combinations of reference and reopen policy in the last phase
-  policyFull <- unname(expand.grid(refPhase1,refPhase2,refPhase3,policyList,stringsAsFactors=FALSE))
-  
-  ## all policy combo to plot
-  policyCombo<<-rbind(refPolicy, 
-                      c(refPhase1,refPhase1,refPhase1,refPhase1),
-                      c(refPhase1,refPhase2,refPhase2,refPhase2),
-                      c(refPhase1,refPhase2,refPhase3,refPhase3),
-                      policyFull)
+  if (NumPhase==4){
+    ## reference policies: 
+    refPolicy <-c(refPhase1,refPhase2,refPhase3,refPhase4)
+
+    ## combinations of reference and reopen policy in the last phase
+    policyFull <- unname(expand.grid(refPhase1,refPhase2,refPhase3,policyList,stringsAsFactors=FALSE))
+    
+    ## all policy combo to plot
+    policyCombo<<-rbind(refPolicy, 
+                        c(refPhase1,refPhase1,refPhase1,refPhase1),
+                        c(refPhase1,refPhase2,refPhase2,refPhase2),
+                        c(refPhase1,refPhase2,refPhase3,refPhase3),
+                        policyFull)
+  }else{
+    ## reference policies: 
+    refPolicy <-c(refPhase1,refPhase2,refPhase3)
+    
+    ## combinations of reference and reopen policy in the last phase
+    policyFull <- unname(expand.grid(refPhase1,refPhase2,policyList,stringsAsFactors=FALSE))
+    
+    ## all policy combo to plot
+    policyCombo<<-rbind(refPolicy, 
+                        c(refPhase1,refPhase1,refPhase1),
+                        c(refPhase1,refPhase2,refPhase2),
+                        c(refPhase1,refPhase2,refPhase3),
+                        policyFull)  
+  }
   return(policyCombo)
 }
 
@@ -313,6 +321,28 @@ extractSeveralState <- function(stateLetterList,simRun) {
 }
 
 
+# extract final outcome of one state by age ---------------
+extractFinalByAge <- function(stateLetter,simRun) {
+  coln <- colnames(simRun)
+  
+  ageVec<-unique(types$age)
+  ageOut<-rep(0,length(ageVec))
+  tt <- dim(simRun)[1]
+  
+  #by age
+  for (i in 1:length(ageVec)){
+    ni<-which(types$age==ageVec[i])
+    #initial population
+    popi<-sum(types$n[ni])
+    
+    ageOut[i] <-  rowSumMat(simRun[tt,coln %in% paste(stateLetter ,ni,sep="")]) 
+    
+  }
+  return(ageOut)
+}
+
+
+
 # plot all state in a list with specified color---------------
 plotSeveralLines <- function(what2plot,colvec,simRun,ltype) {
   t<-dim(simRun)[1]-1
@@ -331,7 +361,12 @@ calOutcome<-function(simRun){
   deaths <-max(extractState("D",simRun)*scal)
   print(paste("Deaths:", round(deaths)))
   
-
+  #death by age
+  print("Deaths in each age group")
+  deathByAge <- extractFinalByAge("D",simRun)
+  print(deathByAge)
+  
+  
   #2. count employment less
   coln <- colnames(simRun)
   
@@ -349,6 +384,10 @@ calOutcome<-function(simRun){
   print(paste("Employment loss (1000days):", 
               round(empLoss/1e3)))  
   
+  ## cases
+  case<-max(extractSeveralState(c("Ihc","Rq","Rqd","D"),simRun))*1e3
+  print(paste("Cumulative cases (per 100k):", 
+              round(case))) 
   
   ## stack outputs
   out <- matrix(c(deaths, empLoss, sum(types$n)),1,3)
