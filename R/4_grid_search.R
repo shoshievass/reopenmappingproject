@@ -15,9 +15,12 @@ gridPar <- function(parm, R0scale){
   #transmission rate
   beta1<-parm[[1]]/R0scale
   beta2<-parm[[2]]/R0scale
+  if(min(beta1,beta2)<0) stop("transmission rate needs to be >=0!")
   
   ### initial condition
   I0<-exp(parm[[3]])
+  if(I0<=0) stop("initial infected fraction needs to be >0!")
+  
   
   return(list(beta1=beta1,beta2=beta2,I0=I0))
 }
@@ -41,24 +44,23 @@ gridPoints <- function(lb, ub, step, j, g0){
 
 
 ### set up contact matrix and beta for each phase in the calibration
-setCmatBeta <- function(gsPar, t, CmatList, betaList){
+setCmatBeta <- function(policy, t, CmatList, betaList){
   
-  #which version of contact matrix and beta to use
-  cmatVer <- gsPar[[paste("cali",t,"_C",sep="")]]
-  betaVer <- gsPar[[paste("cali",t,"_beta",sep="")]]
-  
+  ### which transmission parameter beta to use
+  mask<-parsePolicyTag(policy,"M")
+  betaVer <- ifelse(mask==3, 1, 2)
   
   ### edit global parameters
   vpar <- vparameters0
   vpar["beta"]<-betaList[betaVer]
-  return(list(Cmat=CmatList[[cmatVer]], vpar=vpar))
+  return(list(Cmat=CmatList[[t]], vpar=vpar))
 }
 
 
 # plot fit in caliration -----------------------------------------------------
-plotCali <- function(xdata, xfit, DC, tVertL, logTag, TpredD) {
+plotCali <- function(xdata, xfit, DC, tVertL) {
   
-  try(if(length(xdata)!=length(xfit))  stop("data and predicted series do not have the same length!"))
+  if(length(xdata)!=length(xfit))  stop("data and predicted series do not have the same length!")
   
   nt<-length(xdata)
   t<-0:(nt-1)
@@ -81,14 +83,7 @@ plotCali <- function(xdata, xfit, DC, tVertL, logTag, TpredD) {
   t2show<-seq(0,max(t),10)
   axis(side  = 1, at = t2show, label=format(t2show+TNAUGHT, "%m/%d"))
   
-  ### include predicted death using cases
-  if (TpredD>0){
-    try(if(DC==1) stop("we cannot predict cases"))
-    lines(t[(nt-TpredD):nt], 
-          xdata[(nt-TpredD):nt], type="b", lwd=1.5, col="red",lty=4)
-  }
-  lines(t[1:(nt-TpredD) ], 
-        xdata[1:(nt-TpredD)], type="l", lwd=1.5, col="red")
+  lines(t[1:nt], xdata[1:nt], type="l", lwd=1.5, col="red")
   
   ### indicate key dates
   abline(v=tVertL,col=c("gray","gray","black","black"))
@@ -128,52 +123,46 @@ gridSearch <- function(m, covid){
   gsPar <- as.vector(gsPar[gsPar$msa==m,])
   gsCol <- names(gsPar)
 
-  #number of time periods
-  T1<-gsPar$T1; try(if(!between(T1, 0, gsPar$T2)) stop("T1 timing is off."))
+    
+  ### msa policy and date
+  msaPD <- loadPolicyDates(m)
   
+  ### initial time
+  T1<-msaPD$TVec[1]
+  
+  ### data
   covid<-covid[covid$t>T1,]
-  nt<-dim(covid)[1]; try(if(nt<1) stop("Too few days of data."))
+  nt<-dim(covid)[1] 
+  if(nt<gsPar$T_range_end) stop("not enough data for calibration sample period")
   
-  ### number of periods for predicted death
-  #   = 0 if not using predicted death to evaluate out of sample fit
-  TpredD <- gsPar$Toos_predDeath; try(if(TpredD<0) stop("Error in num. periods predicted death."))
   
+  ### contact matrices
+  CmatList<-list()
+  eigvList<-c()
+  np<-length(msaPD$refPolicy)
+  for (i in 1:np){
+    if (msaPD$TVec[i]<nt){
+      CmatList[[i]]<-loadData(m, msaPD$refPolicy[i])
+      eigvList[i]<-largestEigenvalue(CmatList[[i]])
+      print(paste("policy in phase", i, ":",  msaPD$refPolicy[i]))
+    }
+  }
+  np<-length(CmatList)
+  print(paste(" largest eigenvalue of contact matrices=", paste(format(eigvList,digits=4), collapse=", ")))  
+
   ### timing
-  ### start/end time of each phase
-  TTTcali <-c(0,gsPar$caliT2-T1,gsPar$caliT3-T1,nt-1+TpredD); try(if(gsPar$caliT2-T1<0) stop("Error in timing of periods."))
+  TTTcali <-msaPD$TVec-T1
+  TTTcali[np+1]<-nt-1
 
   ### time range of the sample used for estimation
   tRange<-seq(gsPar$T_range_start, gsPar$T_range_end)-T1
   
   #show several lines in calibration plot
-  tVertL<-c(gsPar$T2,gsPar$T3,min(tRange)+T1,max(tRange)+T1)
-  
-  ### fit log death or death
-  logD   <- gsPar$calibrate_log_death; try(if(!between(logD, 0, 1)) stop("Error in fitting deaths or log deaths."))
-  logTag <- ifelse(logD, "Log ", "")
+  tVertL<-c(TTTcali[2:np],min(tRange)+T1,max(tRange)+T1)
   
   ### death and cases in the data
   dead<-covid$deathper100k;  try(if(any(dead<0)) stop("Error in death data."))
   case<-covid$caseper100k;   try(if(any(case<0)) stop("Error in case data."))
-  if (TpredD>0){
-    dead <- casePredDeath(covid, TpredD)
-  }
-  ## log transform of deaths/cases
-  if (logD==1){
-    dead<-log(dead)
-    case<-log(case)
-  }
-  
-  ### no policy, essential only, and cautious reopening contact matrix
-  CmatList <- list(loadData(m, refPhase1), 
-                   loadData(m, refPhase2), 
-                   loadData(m, refPhase3))
-  eig<-largestEigenvalue(CmatList[[1]])
-  print(paste(" largest eigenvalue of contact matrices=", 
-              format(largestEigenvalue(CmatList[[1]]),digits=4),
-              format(largestEigenvalue(CmatList[[2]]),digits=4),
-              format(largestEigenvalue(CmatList[[3]]),digits=4)))
-  
   
   ### lower/upper bound for beta1, beta2 and initial condition
   lb   <-unlist(gsPar[grep("lb",   gsCol, perl=T)]);  try(if(any(lb[1:2]<0)) stop("Beta1 and Beta2 must be >=0."))
@@ -190,26 +179,26 @@ gridSearch <- function(m, covid){
     
     ### mholder for simulated death/case
     ng<-dim(gList)[1]
-    fitDeath<-matrix(0,ng,nt+TpredD)
-    fitCase <-matrix(0,ng,nt+TpredD)
+    fitDeath<-matrix(0,ng,nt)
+    fitCase <-matrix(0,ng,nt)
     
     start_time <- Sys.time()
     for (i in 1:ng){
       ### parameters
-      parm    <-gridPar(gList[i,], infectDuration*eig)
+      parm    <-gridPar(gList[i,], infectDuration*eigvList[1])
       betaList<-c(parm$beta1, parm$beta2)
       
       ### initial condition
-      initNumIperType<<-parm$I0; try(if(initNumIperType<=0) stop("Error in initial amount of Infected."))
+      initNumIperType<<-parm$I0
       
       ### for three periods phase 0-old beta, phase 1-old beta, phase 1-new beta
       sim0<-NA
-      for (t in 1:3){
+      for (t in 1:np){
         inits<-initialCondition(TTTcali[t],sim0)
         vt <- seq(0,diff(TTTcali)[t],1) 
         
         # set contact matrix and parameter in each period
-        CB <- setCmatBeta(gsPar, t, CmatList, betaList)
+        CB <- setCmatBeta(msaPD$refPolicy[[t]], t, CmatList, betaList)
         Cmat<<-CB$Cmat
 
         # RUN SIR
@@ -236,11 +225,6 @@ gridSearch <- function(m, covid){
     end_time <- Sys.time()
     print(end_time - start_time)
     
-    ### log transform of deaths/cases
-    if (logD==1){
-      fitDeath<-log(fitDeath)
-      fitCase <-log(fitCase)
-    }
     ## fit death, min squared loss
     err<-fitDeath - matrix(1,ng,1)%*%dead
     sse<-rowSums(err[,tRange]^2)
@@ -248,18 +232,19 @@ gridSearch <- function(m, covid){
     #best fit
     gstar<-which.min(sse)
     g0<-as.double(gList[gstar,])
-    parm<-gridPar(g0, infectDuration*eig)
+    parm<-gridPar(g0, infectDuration*eigvList[1])
       
     ### plot comparison
     par(mfrow=c(1,2))
-    plotCali(dead, fitDeath[gstar,], 0, tVertL, logTag, TpredD)
-    plotCali(case, fitCase[gstar,1:nt], 1, tVertL, logTag, 0)
+    plotCali(dead, fitDeath[gstar,], 0, tVertL)
+    plotCali(case, fitCase[gstar,1:nt]*mean(case)/mean(fitCase[gstar,]), 1, tVertL)
     
     ## check within grid search boundary
-    try(if(min((g0<ub) * (g0>lb))!=1) stop(paste("grid search hit boundary:", paste(rbind(lb,g0,ub), collapse=", " ))))
+    if(min((g0<ub) * (g0>lb))!=1) {
+      print(rbind(lb,g0,ub))
+      stop(paste("grid search hit boundary"))
+    }
   }
-  
-  
   
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   print("grid search both rounds done!!")
@@ -277,11 +262,10 @@ gridSearch <- function(m, covid){
   
   
   ### plot calibration result
-  pname<-ifelse(TpredD>0, "calibrate_beta_I0_pred_d_msa", "calibrate_beta_I0_msa")
   par(mfrow=c(1,1))
-  fn <- file.path(outPath, "figure", paste(pname, m, ".pdf", sep=""))
+  fn <- file.path(outPath, "figure", paste("calibrate_beta_I0_msa", m, ".pdf", sep=""))
   pdf(fn)
-  plotCali(dead, fitDeath[gstar,], 0, tVertL, logTag, TpredD)
+  plotCali(dead, fitDeath[gstar,], 0, tVertL)
   dev.off()
   print(paste("  saved plot:",fn))
 }

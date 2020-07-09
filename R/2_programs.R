@@ -112,6 +112,9 @@ initialCondition <- function(fromT,sim0) {
 }
 
 
+#####################################
+#### other helper functions 
+#####################################
 
 # calibrated parameters  -----------------------------------------------------
 # load previously calibrated parameters
@@ -173,9 +176,7 @@ checkWrite <- function(fn, out, msg){
 }
 
 
-#####################################
-#### other helper functions 
-#####################################
+
 
 # get code directory  -----------------------------------------------------
 getCodePath <- function(filename){
@@ -202,6 +203,49 @@ loadCmat <- function(path, cFn){
   } 
   return(C)
 }
+
+
+
+
+# load policy scenario and dates -----------------------------------------------------
+loadPolicyDates <- function(m){
+  
+  # load policy and dates for this msa
+  P <- read.csv(policyParm, header=TRUE) 
+  P <- P[P$MSA==m,]
+ 
+  # variable names
+  colNm <- colnames(P)
+  colNm <- colNm[!(colNm %in% "Tend")]
+  
+  # policy scenarios and dates
+  policies <- grep("Scenario",colNm,perl=T)
+  dates    <- grep("T",colNm,perl=T)
+  if(length(policies)!=length(dates)) stop("number of policies and number dates not match!")
+  
+  # for each phase
+  np<-length(policies)
+  policyVec<-c()
+  TVec<-c()
+  for (i in 1:np){
+    poli_i <- as.character(P[[colNm[policies[i]]]])
+    date_i <- P[[colNm[dates[i]]]]
+    
+    #policy name tag
+    em <-ifelse(i==1,"-E2-M3","-E2-M2")
+    policyVec<-c(policyVec,paste("_",poli_i,em,sep=""))
+    
+    #start of this policy
+    TVec<-c(TVec,date_i)
+  }
+  
+  # end dates
+  TVec<-c(TVec, P$Tend)
+  if(min(diff(msaPD$TVec))<=0) stop("policy start dates not increasing")
+  
+  return(list(refPolicy=policyVec, TVec=TVec))
+}
+
 
 
 # indicate fraction of people in this type that are actively working  -----------------------------------------------------
@@ -235,6 +279,7 @@ parsePolicyTag <- function(policyTag, poli) {
   pos <- gregexpr(poli,policyTag)[[1]][1] + 1
   return(as.numeric(substr(policyTag, pos, pos)))
 }
+
 
 # enumerate all policies to plot, including references  -------------------------------------
 genPolicy <- function(NumPhase, reopenPolicy,refPhase1,refPhase2,refPhase3,refPhase4) {
