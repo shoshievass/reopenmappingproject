@@ -154,8 +154,8 @@ initNumIperType<<-1
 #########################################################
 
 #industry to plot
-naics2plot<<-c(31,42,44,52,54,62,72)
-naicsName<<-c("Manufacturing*","Wholesale*","Retail","Finance","Professional & IT","Healthcare*","Accommodation")
+naics2plot<<-c(62,31,42,44,52,54,72)
+naicsName<<-c("Healthcare*","Manufacturing*","Wholesale*","Retail","Finance","Professional & IT","Accommodation")
 
 
 # setting for plot color
