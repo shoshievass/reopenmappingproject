@@ -241,7 +241,7 @@ loadPolicyDates <- function(m){
   
   # end dates
   TVec<-c(TVec, P$Tend)
-  if(min(diff(msaPD$TVec))<=0) stop("policy start dates not increasing")
+  if(min(diff(TVec))<=0) stop("policy start dates not increasing")
   
   return(list(refPolicy=policyVec, TVec=TVec))
 }
@@ -280,38 +280,41 @@ parsePolicyTag <- function(policyTag, poli) {
   return(as.numeric(substr(policyTag, pos, pos)))
 }
 
+# policy combo matrix  -------------------------------------
+policyMatrix <- function(refPolicy,np){
+  # we gradually incorporate reference policies, so we have the benchmark at each phase
+  X <-matrix(0,np,np)
+  for (i in 1:np){
+    for (j in 1:np){
+      X[np+1-i,j]<-min(i,j)
+    }
+  }
+  
+  # number of policy to string
+  return(matrix(refPolicy[X],np,np))
+}
+
+
 
 # enumerate all policies to plot, including references  -------------------------------------
-genPolicy <- function(NumPhase, reopenPolicy,refPhase1,refPhase2,refPhase3,refPhase4) {
-  policyList <<- policyTagString(reopenPolicy)
+genPolicy <- function(reopenPolicy,refPolicy) {
   
-  if (NumPhase==4){
-    ## reference policies: 
-    refPolicy <-c(refPhase1,refPhase2,refPhase3,refPhase4)
+  ## number of phases
+  np <-length(refPolicy)
+  
+  ## reference policies
+  refp <- policyMatrix(refPolicy,np)
+  
+  ## different reopen policies
+  policyList <<- policyTagString(reopenPolicy)
+  nr <- length(policyList)
+  
+  ## combinations of reference and reopen policy in the last phase
+  policyFull <- t(unname(rbind(matrix(rep(refPolicy[1:(np-1)],nr),(np-1),nr),policyList)))
 
-    ## combinations of reference and reopen policy in the last phase
-    policyFull <- unname(expand.grid(refPhase1,refPhase2,refPhase3,policyList,stringsAsFactors=FALSE))
-    
-    ## all policy combo to plot
-    policyCombo<<-rbind(refPolicy, 
-                        c(refPhase1,refPhase1,refPhase1,refPhase1),
-                        c(refPhase1,refPhase2,refPhase2,refPhase2),
-                        c(refPhase1,refPhase2,refPhase3,refPhase3),
-                        policyFull)
-  }else{
-    ## reference policies: 
-    refPolicy <-c(refPhase1,refPhase2,refPhase3)
-    
-    ## combinations of reference and reopen policy in the last phase
-    policyFull <- unname(expand.grid(refPhase1,refPhase2,policyList,stringsAsFactors=FALSE))
-    
-    ## all policy combo to plot
-    policyCombo<<-rbind(refPolicy, 
-                        c(refPhase1,refPhase1,refPhase1),
-                        c(refPhase1,refPhase2,refPhase2),
-                        c(refPhase1,refPhase2,refPhase3),
-                        policyFull)  
-  }
+  ## all policy combo to run
+  policyCombo<<-rbind(refp,policyFull)
+ 
   return(policyCombo)
 }
 

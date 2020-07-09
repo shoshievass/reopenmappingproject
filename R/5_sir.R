@@ -8,11 +8,15 @@
 
 
 
-### wraper function for running SIR under one policy combination 
+### wrapper function for running SIR under one policy combination 
 runSir <- function(place, policy, par, simRef){
+  #number of phases
+  np<-length(policy)
+  
   sim0<-NA
-  # for each of three phases
-  for (j in 1:NumPhase){
+  
+  # for each phase
+  for (j in 1:np){
     contact <- as.vector(policy[[j]])
     # load contact matrix from synthetic population
     Cmat<<-loadData(place, contact)
@@ -43,8 +47,8 @@ runSir <- function(place, policy, par, simRef){
     stopifnot(abs(min(check)-max(check))<0.1)
     
     # organize outputs across three phasess
-    if (j==NumPhase){
-      pcombo<-paste(policy[1:NumPhase], collapse="" )
+    if (j==np){
+      pcombo<-paste(policy, collapse="" )
         
       # generate plot/csv outputs
       if (outputSIR==1){
@@ -85,51 +89,48 @@ dfRow<-0
 for (m in msaList){
   # load calibrated parameters for this location
   par<-calibratedPar(m)
-  
-  # load location input parameters
-  gsPar <- checkLoad(gsParm)
-  gsPar <- as.vector(gsPar[gsPar$msa==m,])
-  
-  # timing for 4 phases
-  TTT<<-c(0,
-          gsPar$T2-gsPar$T1,
-          gsPar$T3-gsPar$T1,
-          gsPar$T4-gsPar$T1,
-          gsPar$Tend)
+
+  ### msa policy and date
+  msaPD <- loadPolicyDates(m)
   
   # number of phases
-  # we allow 3 or 4 different phases, 
-  # if T4 = Tend, then we run 3 phases, ow we run 4
-  NumPhase<<-ifelse(gsPar$T4==gsPar$Tend, 3, 4)
-  
+  np <- length(msaPD$refPolicy)
+
+  # timing of each policy
+  TTT <<-c(msaPD$TVec[1:np]-msaPD$TVec[1], msaPD$TVec[np+1])
+
   # initial condition
   initNumIperType<<-par$I0
   
   #policy combo
-  policyCombo<<-genPolicy(NumPhase, reopenPolicy,refPhase1,refPhase2,refPhase3,refPhase4)
+  policyCombo<<-genPolicy(reopenPolicy, msaPD$refPolicy)
   
   
   
   # for each policy combo
+  simRef<-NA
   for (i in 1:dim(policyCombo)[1]){
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     print(paste("!! Running SIR for policy combo", i,"/", dim(policyCombo)[1], 
-                ":", paste(policyCombo[i,1:NumPhase], collapse=""),"at MSA", m, "......!!"))
+                ":", paste(policyCombo[i,], collapse=""),"at MSA", m, "......!!"))
     
+    ## sir across phases
+    sim_i<-runSir(m, as.vector(policyCombo[i,]), par, simRef)
+    outstats_i<-calOutcome(sim_i)
+    
+    #the first is reference policies in each MSA
     if (i==1){
-      #the first is reference policies in each MSA
-      simRef<-runSir(m, as.vector(policyCombo[i,]), par, NA)
-      outstats_ref<-calOutcome(simRef)
-    }else{
-      sim_i<-runSir(m, as.vector(policyCombo[i,]), par, simRef)
-      outstats_i<-calOutcome(sim_i)
-      
-      ## collect outputs
-      dfRow<-dfRow+1
-      policy4<-c("","","","")
-      policy4[1:NumPhase]<-gsub("_","",policyCombo[i,])
-      df[dfRow,]<-c(policy4, m, outstats_i[1:2]/outstats_ref[1:2]-1,outstats_i)
+      simRef<-sim_i
+      outstats_ref<-outstats_i
     }
+    
+    ## collect outputs
+    dfRow<-dfRow+1
+    policyVecName<-c("","","","")
+    policyVecName[1:min(4,np)]<-gsub("_","",policyCombo[i,1:min(4,np)])
+    df[dfRow,]<-c(policyVecName, m, outstats_i[1:2]/outstats_ref[1:2]-1,outstats_i)
+    
+    if (np>4) print("running more than 4 phases, only store policy tags of first 4 in aggregate output!")
   }
 }
 rm(Cmat, par)
