@@ -211,7 +211,7 @@ loadCmat <- function(path, cFn){
 loadPolicyDates <- function(m){
   
   # load policy and dates for this msa
-  P <- read.csv(policyParm, header=TRUE) 
+  P <- checkLoad(policyParm) 
   P <- P[P$MSA==m,]
  
   # variable names
