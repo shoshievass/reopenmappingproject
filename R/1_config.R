@@ -51,6 +51,9 @@ seirParm  <<- file.path(parmPath,"seir_parameters.csv")
 # contact matrix file names start with
 ctMatData <<- "C_msa"
 
+# msa specific policy scenarios and dates
+policyParm <<- file.path(parmPath, "msa_policy_scenarios_dates.csv")
+
 # inputs for grid search calibration
 gsParm <<- file.path(parmPath, "gridsearch.csv")
 
@@ -62,29 +65,16 @@ caliParm  <<- "calibrated_parm_msa"
 #####################################
 # policy and locations
 #####################################
-### scenarios/place
-
-
-## reference policies: NP, EO, NP(M2), NP(M2)
-refPhase1 <<-"_W4-S3-N3-E2-M3"
-refPhase2 <<-"_W1-S1-N1-E2-M2"
-refPhase3 <<-"_W4-S3-N1-E2-M2"
-refPhase4 <<-"_W4-S3-N3-E2-M2"
-
 
 ## contact definition for 
 # W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), M(mask), although M no impact on contact
 
-# all reopening policies
+# all combinations of reopening policies
 contactPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:3)
 
 #NP, EO, CR, AS, WFH, 60+
 #reduced beta, normal beta, even lower beta
 reopenPolicy<<-rbind(c(4,3,3,2,2),c(1,1,1,2,2),c(4,3,1,2,2),c(3,2,1,2,2),c(2,3,1,2,2),c(4,3,1,1,2))
-
-#####################################
-# hard code parameters
-#####################################
 
 
 ## MSAs
@@ -121,11 +111,6 @@ datv<<-""
 
 ### save results/plots?
 outputSIR<<-0
-
-## source of input for contact matrix
-Csource<<-list(msa5600="fred", msa7240="fred", msa3360="fred", msa1920="fred",
-               msa1600="replica", msa6920="replica", msa3760="replica")
-
 
 
 #####################################
