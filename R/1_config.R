@@ -20,17 +20,33 @@ library(dplyr)
 library(tidyr)
 library(pracma)
 
+
 #####################################
-## check input files
+## check folders exist
 #####################################
 
-## user input file names
+# check if directory exist
+dir.create(tempPath, showWarnings = FALSE)
+dir.create(contactMatrixPath, showWarnings = FALSE)
+dir.create(calibratedParPath, showWarnings = FALSE)
+dir.create(parmPath, showWarnings = FALSE)
+dir.create(outPath, showWarnings = FALSE)
+
+
+
+#####################################
+## input file names
+#####################################
+
+
+# msa type adjustment
+msaType  <<- file.path(dataPath, "msa_type.csv")
 
 # data for fitting death
 deathData <<- file.path(dataPath,"covid_case_death_jh.csv")
 
 # SEIR model parameters
-seirParm  <<- file.path(parmPath,"params.csv")
+seirParm  <<- file.path(parmPath,"seir_parameters.csv")
 
 # contact matrix file names start with
 ctMatData <<- "C_msa"
@@ -122,7 +138,7 @@ COMPART   <<-c("S","E","Ia","Ins","Ihc","Rq","Rqd","Rnq","D")
 PAR <-checkLoad(seirParm)
 
 #constant parameters
-betaH <-min(PAR$betaH)
+betaH <-min(PAR$beta_healthcare)
 gamma <-1/min(PAR$gamma_inv)
 gammaD<-1/min(PAR$gammaD_inv)
 psi   <-min(PAR$psi)
@@ -157,7 +173,7 @@ naics2plot<<-c(31,42,44,52,54,62,72)
 naicsName<<-c("Manufacturing*","Wholesale*","Retail","Finance","Professional & IT","Healthcare*","Accommodation")
 
 
-# setting for plots
+# setting for plot color
 gen_col()
 
 

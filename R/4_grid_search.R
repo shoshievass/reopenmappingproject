@@ -58,9 +58,8 @@ setCmatBeta <- function(gsPar, t, CmatList, betaList){
 # plot fit in caliration -----------------------------------------------------
 plotCali <- function(xdata, xfit, DC, tVertL, logTag, TpredD) {
   
-  if (length(xdata)!=length(xfit)){
-    stop("data and predicted series do not have the same length!")
-  }
+  try(if(length(xdata)!=length(xfit))  stop("data and predicted series do not have the same length!"))
+  
   nt<-length(xdata)
   t<-0:(nt-1)
   
@@ -84,9 +83,7 @@ plotCali <- function(xdata, xfit, DC, tVertL, logTag, TpredD) {
   
   ### include predicted death using cases
   if (TpredD>0){
-    if (DC==1){
-      stop("we cannot predict cases")
-    }
+    try(if(DC==1) stop("we cannot predict cases"))
     lines(t[(nt-TpredD):nt], 
           xdata[(nt-TpredD):nt], type="b", lwd=1.5, col="red",lty=4)
   }
@@ -152,12 +149,12 @@ gridSearch <- function(m, covid){
   tVertL<-c(gsPar$T2,gsPar$T3,min(tRange)+T1,max(tRange)+T1)
   
   ### fit log death or death
-  logD   <- gsPar$logDeath; try(if(!between(logD, 0, 1)) stop("Error in fitting deaths or log deaths."))
+  logD   <- gsPar$calibrate_log_death; try(if(!between(logD, 0, 1)) stop("Error in fitting deaths or log deaths."))
   logTag <- ifelse(logD, "Log ", "")
   
   ### death and cases in the data
   dead<-covid$deathper100k;  try(if(any(dead<0)) stop("Error in death data."))
-  case<-covid$caseper100k; try(if(any(case<0)) stop("Error in case data."))
+  case<-covid$caseper100k;   try(if(any(case<0)) stop("Error in case data."))
   if (TpredD>0){
     dead <- casePredDeath(covid, TpredD)
   }
@@ -259,11 +256,10 @@ gridSearch <- function(m, covid){
     plotCali(case, fitCase[gstar,1:nt], 1, tVertL, logTag, 0)
     
     ## check within grid search boundary
-    if(min((g0<ub) * (g0>lb))!=1){
-      print(rbind(lb,g0,ub))
-      stop("grid search hit boundary")
-    }
+    try(if(min((g0<ub) * (g0>lb))!=1) stop(paste("grid search hit boundary:", paste(rbind(lb,g0,ub), collapse=", " ))))
   }
+  
+  
   
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   print("grid search both rounds done!!")
@@ -276,10 +272,9 @@ gridSearch <- function(m, covid){
   ### export calibration results as csv
   parmOut<-matrix(c(parm$beta1,parm$beta2,parm$I0),1,3)
   colnames(parmOut)<-c("beta1","beta2","I0")
-  fn <- file.path(calibratedParPath, paste(caliParm, m, datv, ".csv", sep=""))
-  write.table(parmOut, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
-  print(paste("export calibrated parameters :",fn))
-
+  checkWrite(file.path(calibratedParPath, paste(caliParm, m, datv, ".csv", sep="")), 
+             parmOut, "calibrated parameters") 
+  
   
   ### plot calibration result
   pname<-ifelse(TpredD>0, "calibrate_beta_I0_pred_d_msa", "calibrate_beta_I0_msa")
