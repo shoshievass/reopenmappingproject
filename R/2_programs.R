@@ -165,6 +165,14 @@ checkLoad <- function(fn) {
 }
 
 
+# write csv, check if file already exist  -----------------------------------------------------
+checkWrite <- function(fn, out, msg){
+  if (file.exists(fn)) print(paste("overwrite existing file"))
+  write.table(out, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
+  print(paste("save",msg,":",fn))
+}
+
+
 #####################################
 #### other helper functions 
 #####################################
@@ -176,9 +184,23 @@ getCodePath <- function(filename){
 }
 
 
-# get contact matrix data source  -----------------------------------------------------
-getCmatSource <- function(m){
-  return(Csource[[paste("msa", m, sep="")]])
+# check contact matrix source and load -----------------------------------------------------
+loadCmat <- function(path, cFn){
+  
+  fnReplica<-file.path(dataPath, paste(cFn, "_replica.csv",sep=""))
+  fnFred   <-file.path(dataPath, paste(cFn, "_fred.csv"   ,sep=""))
+  
+  #first try replica then fred
+  if(file.exists(fnReplica)){
+    C<-read.csv(fnReplica, header=TRUE) 
+    print("load replica contact matrix")
+  }else if(file.exists(fnFred)){
+    C<-read.csv(fnFred, header=TRUE)
+    print("load fred contact matrix")
+  }else{
+    stop(paste("missing", cFn))
+  } 
+  return(C)
 }
 
 
@@ -553,8 +575,8 @@ exportSIR <- function(sim1,place,contact,pcombo) {
                       place, pcombo, 
                       "_T", paste(TTT[-1], collapse="-"), 
                       verTag, ".csv", sep=""))
-    write.table(cbind(out,outj), file=fn,sep=",",col.names=TRUE,row.names=FALSE)
-    print(paste("  export output:",fn))
+    checkWrite(fn, cbind(out,outj), "SIR outputs") 
+    
   }
 }
 

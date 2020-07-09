@@ -136,10 +136,8 @@ rm(Cmat, par)
 
 
 #export csv
-fn <- file.path(outPath, 
-            paste("Agg_SIR", datv, ".csv", sep=""))
-write.table(df, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
-print(paste("aggregate SIR outputs:",fn))
+checkWrite(file.path(outPath,paste("Agg_SIR", datv, ".csv", sep="")), 
+           df, "aggregate SIR outputs") 
 
 end_time <- Sys.time()
 print(end_time - start_time)

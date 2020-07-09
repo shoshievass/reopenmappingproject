@@ -116,11 +116,10 @@ for (m in msaList){
   ### load data
   #####################################
   # load contact
-  fn<- file.path(dataPath, paste("contact_msa", m, "_", getCmatSource(m), ".csv",sep=""))
-  C <-checkLoad(fn)
+  C <-loadCmat(paste("contact_msa", m, sep=""))
   
   # load types
-  TYPE <-checkLoad(file.path(dataPath, "msa_type.csv"))
+  TYPE <-checkLoad(msaType)
   TYPE <-TYPE[TYPE$msa==m,!(colnames(TYPE) %in% c("msaname"))]
   
   # types for individual i and j
@@ -219,12 +218,10 @@ for (m in msaList){
     }
     
     #export contact matrix csv
-    fn <- file.path(contactMatrixPath, 
-                paste(ctMatData, m, "_", policy, datv, ".csv", sep=""))
-    write.table(Cmat2, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
-    print(paste("export contact matrix:",fn))
-    
-    
+    checkWrite(file.path(contactMatrixPath, 
+                         paste(ctMatData, m, "_", policy, datv, ".csv", sep="")), 
+               Cmat2, "contact matrix")
+
     #collapse to lower dimension contact matrix
     Cmat1 <- Cmat %>% 
       group_by(ego, age_i, naics_i, sick_i, wfh_i, shift_i, age_j) %>%    # group by target type 
@@ -244,11 +241,9 @@ for (m in msaList){
   }
   
   #export aggregate contact matrix by age
-  fn <- file.path(outPath, 
-              paste(ctMatData, m, "_allPolicy", datv, ".csv", sep=""))
-  write.table(CmatAll, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
-  print(paste("aggregate contact matrix:",fn))
-  
+  checkWrite(file.path(outPath, 
+                       paste(ctMatData, m, "_allPolicy", datv, ".csv", sep="")), 
+             CmatAll, "aggregate contact matrix")  
   
   rm(C, Th, Cmat, Cmat2, Cp, policy, typeVec)
 }
