@@ -74,16 +74,19 @@ runSir <- function(place, policy, par, simRef){
 #####################################
 start_time <- Sys.time()
 
+
+### get max number of policy scenarios across MSAs
+P <- checkLoad(policyParm) 
+np <- length(grep("Scenario",colnames(P),perl=T))
+
 # aggregate key outputs
-df <- data.frame(Policy1=character(),Policy2=character(),Policy3=character(),Policy4=character(),
-                 MSA=character(), 
-                 BaselineAdjDeaths=numeric(), 
-                 BaselineAdjEmpHours=numeric(), 
-                 Deaths=numeric(), 
-                 EmpHoursLost=numeric(), 
-                 Population=numeric(), 
-                 stringsAsFactors=FALSE) 
+df<-data.frame(matrix(ncol = np+6, nrow = 0, 
+                  dimnames=list(NULL, 
+                        c(paste("Policy",1:np, sep=""), 
+                          "MSA", "BaselineAdjDeaths", "BaselineAdjEmpHours", "Deaths", "EmpHoursLost", "Population"))
+                  ), stringsAsFactors=FALSE)
 dfRow<-0
+policyVecName0<-rep("",np)
 
 # foreach place
 for (m in msaList){
@@ -93,7 +96,7 @@ for (m in msaList){
   ### msa policy and date
   msaPD <- loadPolicyDates(m)
   
-  # number of phases
+  # number of phases for this MSA
   np <- length(msaPD$refPolicy)
 
   # timing of each policy
@@ -126,11 +129,9 @@ for (m in msaList){
     
     ## collect outputs
     dfRow<-dfRow+1
-    policyVecName<-c("","","","")
-    policyVecName[1:min(4,np)]<-gsub("_","",policyCombo[i,1:min(4,np)])
+    policyVecName <- policyVecName0
+    policyVecName[1:np]<-gsub("_","",policyCombo[i,])
     df[dfRow,]<-c(policyVecName, m, outstats_i[1:2]/outstats_ref[1:2]-1,outstats_i)
-    
-    if (np>4) print("running more than 4 phases, only store policy tags of first 4 in aggregate output!")
   }
 }
 rm(Cmat, par)
