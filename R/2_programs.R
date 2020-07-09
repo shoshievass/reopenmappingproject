@@ -500,7 +500,7 @@ plotSIR <- function(sim1,sim2) {
   
   legend("topright",
          legend=state2plot,
-         col=mycol[colvec],lwd=2,bty="n",cex=1.2)
+         col=mycol[colvec],horiz=F,lwd=1.3,bty="n",cex=0.8)
 }
 
 
@@ -512,9 +512,9 @@ plotSIRHealth <- function(sim1,sim2) {
   TT<-dim(sim1)[1]-1
   
   # state to plot
-  state2plot<-c("Infected Symptomatic", "Infected Asymptomatic","Employment Loss","Quarantine after Treatment")
-  what2plot<-list(Ihc="Ihc",I=c("Ia","Ins"),Emp=c("Ihc","Rq","D"), Rq="Rq")
-  colvec<-c(1,6,2,7)
+  state2plot<-c("Employment Loss","Infected Symptomatic", "Infected Asymptomatic","Quarantine after Treatment")
+  what2plot<-list(Emp=c("Ihc","Rq","D"), Ihc="Ihc",I=c("Ia","Ins"),Rq="Rq")
+  colvec<-c(2,1,6,7)
   
   # primary outputs
   plot(0:TT,extractSeveralState(what2plot[[1]],sim1)
@@ -542,7 +542,7 @@ plotSIRHealth <- function(sim1,sim2) {
   
   legend("topleft",
          legend=c(state2plot,"Death (RHS)"),
-         col=mycol[c(colvec,5)],lwd=2,bty="n", cex=1.2)
+         col=mycol[c(colvec,5)],horiz=F,lwd=1.3,bty="n",cex=0.8)
 }
 
 
@@ -579,7 +579,7 @@ plotIbyNaics <- function(sim1) {
       lines(0:TT,I,type='l',lwd=2,col=mycol[i])
     }
   }
-  legend("topright", legend=naicsName,col=mycol[c(1:7)],horiz=F,lwd=2,bty="n", cex=1.2)
+  legend("topright", legend=naicsName,col=mycol[c(1:7)],horiz=F,lwd=1.3,bty="n",cex=0.8)
 }
 
 
@@ -678,14 +678,7 @@ gen_col <- function() {
               t_col("green",   perc = 0),
               t_col("dimgray", perc = 0),
               t_col("blue",    perc = 0),
-              t_col("purple",  perc = 0),
-              t_col("red",     perc = 40),
-              t_col("orange",  perc = 40),
-              t_col("yellow2", perc = 40),
-              t_col("green",   perc = 40),
-              t_col("dimgray", perc = 40),
-              t_col("blue",    perc = 40),
-              t_col("purple",  perc = 40))
+              t_col("purple",  perc = 0))
   mycolLength<<-7
   psize<<-1.25
 }
