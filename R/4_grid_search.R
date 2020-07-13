@@ -58,7 +58,7 @@ setCmatBeta <- function(policy, t, CmatList, betaList){
 
 
 # plot fit in caliration -----------------------------------------------------
-plotCali <- function(xdata, xfit, DC, tVertL) {
+plotCali <- function(fn, xdata, xfit, DC, tVertL) {
   
   if(length(xdata)!=length(xfit))  stop("data and predicted series do not have the same length!")
   
@@ -71,6 +71,10 @@ plotCali <- function(xdata, xfit, DC, tVertL) {
   }else{
     ylbl <- paste(logTag, "Case Per 100 000 of Population")    
   }
+  
+  ## do we export figure
+  if (fn!="") pdf(fn)
+  dev.off()
   
   ### plot fit
   xdata_finite <- xdata[is.finite(xdata)]
@@ -86,8 +90,11 @@ plotCali <- function(xdata, xfit, DC, tVertL) {
   lines(t[1:nt], xdata[1:nt], type="l", lwd=1.5, col="red")
   
   ### indicate key dates
-  abline(v=tVertL,col=c("gray","gray","black","black"))
+  nline<-length(tVertL)
+  lcolors<-c(rep("gray")-2,rep("black",2))
+  abline(v=tVertL,col=lcolors)
   
+  if (fn!="") dev.off()
 }
 
 ### use case to death ratio to predict death for an additional couple of days
@@ -236,8 +243,8 @@ gridSearch <- function(m, covid){
       
     ### plot comparison
     par(mfrow=c(1,2))
-    plotCali(dead, fitDeath[gstar,], 0, tVertL)
-    plotCali(case, fitCase[gstar,1:nt]*mean(case)/mean(fitCase[gstar,]), 1, tVertL)
+    plotCali("", dead, fitDeath[gstar,], 0, tVertL)
+    plotCali("", case, fitCase[gstar,1:nt]*mean(case)/mean(fitCase[gstar,]), 1, tVertL)
     
     ## check within grid search boundary
     if(min((g0<ub) * (g0>lb))!=1) {
@@ -262,11 +269,8 @@ gridSearch <- function(m, covid){
   
   
   ### plot calibration result
-  par(mfrow=c(1,1))
   fn <- file.path(outPath, "figure", paste("calibrate_beta_I0_msa", m, ".pdf", sep=""))
-  pdf(fn)
-  plotCali(dead, fitDeath[gstar,], 0, tVertL)
-  dev.off()
+  plotCali(fn, dead, fitDeath[gstar,], 0, tVertL)
   print(paste("  saved plot:",fn))
 }
 
