@@ -50,18 +50,9 @@ runSir <- function(place, policy, par, simRef){
     if (j==np){
       pcombo<-paste(policy, collapse="" )
         
-      # generate plot/csv outputs
-      if (outputSIR==1){
-        exportSIR(sim0,place,contact,pcombo)
-        packagePlot(sim0,place,pcombo,simRef)
-      }else{
-        # plot SIR output, not save
-        par(mfrow=c(2,2))
-        
-        plotSIR(sim0,NA)
-        plotSIRHealth(sim0,NA)
-        plotIbyNaics(sim0)
-      }
+      # generate csv outputs
+      if (outputSIR==1) exportSIR(sim0,place,contact,pcombo)
+      packagePlot(sim0,place,pcombo,simRef)
     }
   }
   
@@ -138,7 +129,7 @@ rm(Cmat, par)
 
 
 #export csv
-checkWrite(file.path(outPath,paste("Agg_SIR", datv, ".csv", sep="")), 
+checkWrite(file.path(outPath, paste("Agg_SIR", datv, ".csv", sep="")), 
            df, "aggregate SIR outputs") 
 
 end_time <- Sys.time()

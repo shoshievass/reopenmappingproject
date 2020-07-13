@@ -476,8 +476,10 @@ calOutcome<-function(simRun){
 
 
 # plot SIR -----------------------------------------------------
-plotSIR <- function(sim1,sim2) {
+plotSIR <- function(fn, sim1,sim2) {
   
+  if (fn!="")  png(fn)
+
   ### aggregate results across classes
   coln <- colnames(sim1)
   TT<-dim(sim1)[1]-1
@@ -501,11 +503,18 @@ plotSIR <- function(sim1,sim2) {
   legend("topright",
          legend=state2plot,
          col=mycol[colvec],horiz=F,lwd=1.3,bty="n",cex=0.8)
+  
+  if (fn!=""){
+    dev.off()
+    print(paste("  saved plot:",fn))
+  }
 }
 
 
 # plot SIR health rated variables -----------------------------------------------------
-plotSIRHealth <- function(sim1,sim2) {
+plotSIRHealth <- function(fn, sim1,sim2) {
+  
+  if (fn!="")  png(fn)
   
   ### aggregate results across classes
   coln <- colnames(sim1)
@@ -543,6 +552,11 @@ plotSIRHealth <- function(sim1,sim2) {
   legend("topleft",
          legend=c(state2plot,"Death (RHS)"),
          col=mycol[c(colvec,5)],horiz=F,lwd=1.3,bty="n",cex=0.8)
+  
+  if (fn!=""){
+    dev.off()
+    print(paste("  saved plot:",fn))
+  }
 }
 
 
@@ -555,7 +569,9 @@ timingVerticalLine <- function(coltxt) {
 
 
 # plot fraction infected by industry  -----------------------------------------------------
-plotIbyNaics <- function(sim1) {
+plotIbyNaics <- function(fn, sim1) {
+  
+  if (fn!="")  png(fn)
   
   #colnames
   coln<-colnames(sim1)
@@ -580,6 +596,11 @@ plotIbyNaics <- function(sim1) {
     }
   }
   legend("topright", legend=naicsName,col=mycol[c(1:7)],horiz=F,lwd=1.3,bty="n",cex=0.8)
+  
+  if (fn!=""){
+    dev.off()
+    print(paste("  saved plot:",fn))
+  }
 }
 
 
@@ -633,24 +654,20 @@ exportSIR <- function(sim1,place,contact,pcombo) {
 # plot SIR across senarios -----------------------------------------------------
 packagePlot <- function(sim1,place,contact, sim2) {
   
-  ### produce plots
-  fn <- file.path(outPath, "figure", paste('SIR_dcm_', place, contact, verTag, ".png", sep=""))
-  png(fn)
-  plotSIR(sim1,sim2)
-  dev.off()
-  print(paste("  saved plot:",fn))
-  
-  fn <- file.path(outPath, "figure", paste('SIR2_dcm_', place, contact, verTag, ".png", sep=""))
-  png(fn)
-  plotSIRHealth(sim1,sim2)
-  dev.off()
-  print(paste("  saved plot:",fn))
-  
-  fn <- file.path(outPath, "figure", paste('Infected_naics_dcm_', place, contact, verTag, ".png", sep=""))
-  png(fn)
-  plotIbyNaics(sim1)
-  dev.off()
-  print(paste("  saved plot:",fn))
+  ### produce plots, just print or save
+  if (outputSIR==1){
+    fnEnd <- paste(place, contact, verTag, ".png", sep="")
+    fn1 <- file.path(outPath, "figure", paste('SIR_dcm_', fnEnd, sep=""))
+    fn2 <- file.path(outPath, "figure", paste('SIR2_dcm_', fnEnd, sep=""))
+    fn3 <- file.path(outPath, "figure", paste('Infected_naics_dcm_', fnEnd, sep=""))
+  }else{
+    fn1 <-""
+    fn2 <-""
+    fn3 <-""
+  }
+  plotSIR(fn1, sim1,sim2)
+  plotSIRHealth(fn2, sim1,sim2)
+  plotIbyNaics(fn3,sim1)
 }
 
 
