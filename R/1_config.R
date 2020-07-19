@@ -10,7 +10,7 @@
 #####################################
 ## check packages
 #####################################
-packages <- c("deSolve","plyr","dplyr","tidyr","pracma")
+packages <- c("deSolve","plyr","dplyr","tidyr")
 newPackages <- packages[!(packages %in% installed.packages()[,"Package"])]
 if(length(newPackages)) install.packages(newPackages)
 
@@ -18,7 +18,6 @@ library(deSolve)
 library(plyr)
 library(dplyr)
 library(tidyr)
-library(pracma)
 
 
 #####################################
@@ -72,17 +71,27 @@ caliParm  <<- "calibrated_parm_msa"
 # all combinations of reopening policies
 contactPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:3)
 
+### key policies considered
 #NP, EO, CR, AS, WFH, 60+
 #reduced beta, normal beta, even lower beta
 reopenPolicy<<-rbind(c(4,3,3,2,2),c(1,1,1,2,2),c(4,3,1,2,2),c(3,2,1,2,2),c(2,3,1,2,2),c(4,3,1,1,2))
 
 
+### all possible combo for reopen policy in the final phase
+# reopenPolicy<<-contactPolicy
+reopenPolicy<<-rbind(c(3,2,1,2,2),c(3,3,1,2,2),c(4,2,1,2,2),c(4,3,1,2,2))
+
+
+
 ## MSAs
 # NYC, Chicago, Sacramento, Houston, Kansas City
 # msa  "5600", "1600", "6920","3360", "3760"
-# msaList<<-c("1600","6920","3760")
+# msaList<<-c("5600","1600","6920","3760")
 msaList<<-c("1600")
 
+#####################################
+# key global variables
+#####################################
 
 ## age number of 60
 age60<<-4
@@ -106,15 +115,13 @@ TNAUGHT <<- as.Date(unique("3/5/2020"), "%m/%d/%Y")
 #output version
 verTag <<-"_combo"
 
-#input (data,contact matrix) version
-datv<<-""
 
-### save results/plots?
+### save detailed sir compartment X type X time level results and plots for internal checking?
 outputSIR<<-0
 
 
 #####################################
-# load and define SIR parameters
+# load and define SEIR parameters
 #####################################
 #compartments
 COMPART   <<-c("S","E","Ia","Ins","Ihc","Rq","Rqd","Rnq","D")

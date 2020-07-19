@@ -52,9 +52,9 @@ schoolContact <- function(Th, poli) {
 ### contact at neighborhood
 neighborContact <- function(Th, poli){
   if (poli==1){
-    contactN<-0.1
+    contactN<-1/3
   }else if (poli==2){
-    contactN<-0.5
+    contactN<-2/3
   }else if (poli==3){
     contactN<-1
   }else{
@@ -142,8 +142,9 @@ for (m in msaList){
   typeVec <-c("age", "naics", "sick", "wfh", "shift")
   
   ## adjust number of people and contact by weight for health, WFH, and shift types 
+  # we use contact weighted by overlap duration (data is in minute and we translate into hours)
   C$num_people<-C$num_people * (C$sick_w_i * C$shift_w_i * C$wfh_w_i)
-  C$num_contact_per_person_day<-C$num_contact_per_person_day * (C$sick_w_j * C$shift_w_j * C$wfh_w_j) 
+  C$contact<-(C$contact_time_min_per_person_day / 60 ) * (C$sick_w_j * C$shift_w_j * C$wfh_w_j) 
   
   # type space for individual i and j
   # define contact between type i and j, and work status for each type i
@@ -174,7 +175,7 @@ for (m in msaList){
     contactE <- elderQuarantine(Th, contactPolicy[p,4]) 
     
     #contact at each level
-    Cp$contactPolicy <- C$num_contact_per_person_day * (
+    Cp$contactPolicy <- C$contact * (
       (Th$contactlvl=="hh") + 
       (Th$contactlvl=="school")   * contactS + 
       (Th$contactlvl=="neighbor") * contactN + 
@@ -219,7 +220,7 @@ for (m in msaList){
     
     #export contact matrix csv
     checkWrite(file.path(contactMatrixPath, 
-                         paste(ctMatData, m, "_", policy, datv, ".csv", sep="")), 
+                         paste(ctMatData, m, "_", policy, ".csv", sep="")), 
                Cmat2, "contact matrix")
 
     #collapse to lower dimension contact matrix
@@ -242,7 +243,7 @@ for (m in msaList){
   
   #export aggregate contact matrix by age
   checkWrite(file.path(outPath, 
-                       paste(ctMatData, m, "_allPolicy", datv, ".csv", sep="")), 
+                       paste(ctMatData, m, "_allPolicy", ".csv", sep="")), 
              CmatAll, "aggregate contact matrix")  
   
   rm(C, Th, Cmat, Cmat2, Cp, policy, typeVec)
