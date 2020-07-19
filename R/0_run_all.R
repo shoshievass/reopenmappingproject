@@ -39,4 +39,4 @@ source(getCodePath("3_gen_contact.R"))
 source(getCodePath("4_grid_search.R"))
 
 ## run SIR
-source(getCodePath("5_sir.R"))
+source(getCodePath("5_seir.R"))

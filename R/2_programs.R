@@ -121,7 +121,7 @@ initialCondition <- function(fromT,sim0) {
 calibratedPar <- function(place) {
   #load calibrated parameter file
   fn <- file.path(calibratedParPath, 
-                  paste(caliParm, place, datv, ".csv", sep=""))
+                  paste(caliParm, place, ".csv", sep=""))
   pData <-checkLoad(fn)
   
   ## extract parameters
@@ -138,7 +138,7 @@ loadData <- function(place,contact) {
   
   # load files
   fn <- file.path(contactMatrixPath, 
-              paste(ctMatData, place, contact, datv, ".csv", sep=""))
+              paste(ctMatData, place, contact, ".csv", sep=""))
   CData <-checkLoad(fn)
 
   
@@ -186,7 +186,7 @@ getCodePath <- function(filename){
 
 
 # check contact matrix source and load -----------------------------------------------------
-loadCmat <- function(path, cFn){
+loadCmat <- function(cFn){
   
   fnReplica<-file.path(dataPath, paste(cFn, "_replica.csv",sep=""))
   fnFred   <-file.path(dataPath, paste(cFn, "_fred.csv"   ,sep=""))
@@ -313,7 +313,12 @@ genPolicy <- function(reopenPolicy,refPolicy) {
   policyFull <- t(unname(rbind(matrix(rep(refPolicy[1:(np-1)],nr),(np-1),nr),policyList)))
 
   ## all policy combo to run
-  policyCombo<<-rbind(refp,policyFull)
+  if (dim(contactPolicy)[1]==dim(reopenPolicy)[1]){
+    # if we run all combinations, just include the main reference
+    policyCombo<<-rbind(refp[1,],policyFull)
+  }else{
+    policyCombo<<-rbind(refp,policyFull)
+  }
  
   return(policyCombo)
 }
@@ -399,14 +404,11 @@ extractFinalByAge <- function(stateLetter,simRun) {
   ageOut<-rep(0,length(ageVec))
   tt <- dim(simRun)[1]
   
-  #by age
+  #for each age cohort
   for (i in 1:length(ageVec)){
     ni<-which(types$age==ageVec[i])
-    #initial population
-    popi<-sum(types$n[ni])
-    
-    ageOut[i] <-  rowSumMat(simRun[tt,coln %in% paste(stateLetter ,ni,sep="")]) 
-    
+    #sum axross all types of this age
+    ageOut[i] <-  rowSumMat(simRun[tt,coln %in% paste(stateLetter, ni,sep="")]) 
   }
   return(ageOut)
 }
@@ -431,11 +433,16 @@ calOutcome<-function(simRun){
   deaths <-max(extractState("D",simRun)*scal)
   print(paste("Deaths:", round(deaths)))
   
-  #death by age
+  #death/cases by age
   print("Deaths in each age group")
   deathByAge <- extractFinalByAge("D",simRun)
   print(deathByAge)
   
+  print("Cases in each age group")
+  caseByAge <- extractFinalByAge("Ihc", simRun) + 
+               extractFinalByAge("Rq" , simRun) +
+               extractFinalByAge("Rqd", simRun) + deathByAge
+  print(caseByAge)
   
   #2. count employment less
   coln <- colnames(simRun)
@@ -665,8 +672,9 @@ packagePlot <- function(sim1,place,contact, sim2) {
     fn2 <-""
     fn3 <-""
   }
-  plotSIR(fn1, sim1,sim2)
-  plotSIRHealth(fn2, sim1,sim2)
+  par(mfrow=c(2,2))
+  plotSIR(fn1,sim1,sim2)
+  plotSIRHealth(fn2,sim1,sim2)
   plotIbyNaics(fn3,sim1)
 }
 

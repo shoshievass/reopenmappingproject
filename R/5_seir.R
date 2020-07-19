@@ -129,7 +129,7 @@ rm(Cmat, par)
 
 
 #export csv
-checkWrite(file.path(outPath, paste("Agg_SIR", datv, ".csv", sep="")), 
+checkWrite(file.path(outPath, paste("Agg_SIR.csv", sep="")), 
            df, "aggregate SIR outputs") 
 
 end_time <- Sys.time()

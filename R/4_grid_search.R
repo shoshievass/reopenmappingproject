@@ -67,14 +67,13 @@ plotCali <- function(fn, xdata, xfit, DC, tVertL) {
   
   ### plot cases or deaths
   if (DC==0){
-    ylbl <- paste(logTag, "Death Per 100 000 of Population")
+    ylbl <- "Death Per 100 000 of Population"
   }else{
-    ylbl <- paste(logTag, "Case Per 100 000 of Population")    
+    ylbl <- "Case Per 100 000 of Population"
   }
   
   ## do we export figure
   if (fn!="") pdf(fn)
-  dev.off()
   
   ### plot fit
   xdata_finite <- xdata[is.finite(xdata)]
@@ -91,28 +90,10 @@ plotCali <- function(fn, xdata, xfit, DC, tVertL) {
   
   ### indicate key dates
   nline<-length(tVertL)
-  lcolors<-c(rep("gray")-2,rep("black",2))
+  lcolors<-c(rep("gray",nline-2),rep("black",2))
   abline(v=tVertL,col=lcolors)
   
   if (fn!="") dev.off()
-}
-
-### use case to death ratio to predict death for an additional couple of days
-casePredDeath <- function(covid, TpredD){
-  
-  # death_{t+TpredD}=b * case_t, 
-  nt<-length(covid$t)
-  y <- covid$deathper100k[(TpredD+1):nt]
-  x <- covid$caseper100k[1:(nt-TpredD)]
-  b <- as.double(solve(t(x)%*%x,  t(x)%*%y))
-  
-  # predicted death
-  yhat<-b * covid$caseper100k
-  
-  #append predicted to actual death
-  delta<-yhat[nt-TpredD] - covid$deathper100k[nt]
-  yhatAdj <- yhat[(nt-TpredD+1):nt] - delta
-  return(c(covid$deathper100k, yhatAdj))
 }
 
 
@@ -128,6 +109,8 @@ gridSearch <- function(m, covid){
   ### grid search input parmaeter
   gsPar <- checkLoad(gsParm)
   gsPar <- as.vector(gsPar[gsPar$msa==m,])
+  if (dim(gsPar)[1]==0) stop(paste("missing MSA ", m, " in grid search parameter file", sep=""))
+  
   gsCol <- names(gsPar)
 
     
@@ -234,17 +217,19 @@ gridSearch <- function(m, covid){
     
     ## fit death, min squared loss
     err<-fitDeath - matrix(1,ng,1)%*%dead
-    sse<-rowSums(err[,tRange]^2)
+    sse<-rowSums(err[,tRange]^2) 
     
     #best fit
     gstar<-which.min(sse)
     g0<-as.double(gList[gstar,])
     parm<-gridPar(g0, infectDuration*eigvList[1])
-      
+    deadfit <- fitDeath[gstar,]
+    casefit <- fitCase[gstar,1:nt]*mean(case)/mean(fitCase[gstar,])
+    
     ### plot comparison
     par(mfrow=c(1,2))
-    plotCali("", dead, fitDeath[gstar,], 0, tVertL)
-    plotCali("", case, fitCase[gstar,1:nt]*mean(case)/mean(fitCase[gstar,]), 1, tVertL)
+    plotCali("", dead, deadfit, 0, tVertL)
+    plotCali("", case, casefit, 1, tVertL)
     
     ## check within grid search boundary
     if(min((g0<ub) * (g0>lb))!=1) {
@@ -264,14 +249,23 @@ gridSearch <- function(m, covid){
   ### export calibration results as csv
   parmOut<-matrix(c(parm$beta1,parm$beta2,parm$I0),1,3)
   colnames(parmOut)<-c("beta1","beta2","I0")
-  checkWrite(file.path(calibratedParPath, paste(caliParm, m, datv, ".csv", sep="")), 
-             parmOut, "calibrated parameters") 
+  checkWrite(file.path(calibratedParPath, paste(caliParm, m, ".csv", sep="")),
+             parmOut, "calibrated parameters")
   
   
   ### plot calibration result
-  fn <- file.path(outPath, "figure", paste("calibrate_beta_I0_msa", m, ".pdf", sep=""))
-  plotCali(fn, dead, fitDeath[gstar,], 0, tVertL)
+  fn <- file.path(outPath, "figure", paste("calibrate_beta_I0_death_msa", m, ".pdf", sep=""))
+  plotCali(fn, dead, deadfit, 0, tVertL)
   print(paste("  saved plot:",fn))
+
+  fn <- file.path(outPath, "figure", paste("calibrate_beta_I0_case_msa", m, ".pdf", sep=""))
+  plotCali("", case, casefit, 1, tVertL)
+  print(paste("  saved plot:",fn))
+  
+  par(mfrow=c(1,2))
+  plotCali("", dead, deadfit, 0, tVertL)
+  plotCali("", case, casefit, 1, tVertL)
+  
 }
 
 
