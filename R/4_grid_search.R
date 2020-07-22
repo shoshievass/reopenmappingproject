@@ -48,7 +48,7 @@ setCmatBeta <- function(policy, t, CmatList, betaList){
   
   ### which transmission parameter beta to use
   mask<-parsePolicyTag(policy,"M")
-  betaVer <- ifelse(mask==3, 1, 2)
+  betaVer <- ifelse(mask==4, 1, 2)
   
   ### edit global parameters
   vpar <- vparameters0
@@ -110,10 +110,8 @@ gridSearch <- function(m, covid){
   gsPar <- checkLoad(gsParm)
   gsPar <- as.vector(gsPar[gsPar$msa==m,])
   if (dim(gsPar)[1]==0) stop(paste("missing MSA ", m, " in grid search parameter file", sep=""))
-  
   gsCol <- names(gsPar)
 
-    
   ### msa policy and date
   msaPD <- loadPolicyDates(m)
   
@@ -125,7 +123,6 @@ gridSearch <- function(m, covid){
   nt<-dim(covid)[1] 
   if(nt<gsPar$T_range_end) stop("not enough data for calibration sample period")
   
-  
   ### contact matrices
   CmatList<-list()
   eigvList<-c()
@@ -133,7 +130,7 @@ gridSearch <- function(m, covid){
   for (i in 1:np){
     if (msaPD$TVec[i]<nt){
       CmatList[[i]]<-loadData(m, msaPD$refPolicy[i])
-      eigvList[i]<-largestEigenvalue(CmatList[[i]])
+      eigvList[i]  <-largestEigenvalue(CmatList[[i]])
       print(paste("policy in phase", i, ":",  msaPD$refPolicy[i]))
     }
   }
@@ -181,7 +178,7 @@ gridSearch <- function(m, covid){
       ### initial condition
       initNumIperType<<-parm$I0
       
-      ### for three periods phase 0-old beta, phase 1-old beta, phase 1-new beta
+      ### for different phases
       sim0<-NA
       for (t in 1:np){
         inits<-initialCondition(TTTcali[t],sim0)
@@ -234,7 +231,7 @@ gridSearch <- function(m, covid){
     ## check within grid search boundary
     if(min((g0<ub) * (g0>lb))!=1) {
       print(rbind(lb,g0,ub))
-      stop(paste("grid search hit boundary"))
+      stop(paste("grid search hit boundary, revise range of grid search in", gsParm))
     }
   }
   

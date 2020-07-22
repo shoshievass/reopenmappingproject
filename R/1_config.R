@@ -68,26 +68,33 @@ caliParm  <<- "calibrated_parm_msa"
 ## contact definition for 
 # W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), M(mask), although M no impact on contact
 
+policyLetterCode <<- c("W", "S", "N", "E", "M")
+
+#default E and M for initial vs subsequent phases in calibration
+policyCaliEM <<- c("-E2-M4","-E2-M1")
+
+
 # all combinations of reopening policies
-contactPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:3)
+contactPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:4)
 
 ### key policies considered
 #NP, EO, CR, AS, WFH, 60+
 #reduced beta, normal beta, even lower beta
-reopenPolicy<<-rbind(c(4,3,3,2,2),c(1,1,1,2,2),c(4,3,1,2,2),c(3,2,1,2,2),c(2,3,1,2,2),c(4,3,1,1,2))
+reopenPolicy<<-rbind(c(4,3,3,2,1),c(1,1,1,2,1),c(4,3,1,2,1),c(3,2,1,2,1),c(2,3,1,2,1),c(4,3,1,1,1))
 
 
 ### all possible combo for reopen policy in the final phase
-# reopenPolicy<<-contactPolicy
-reopenPolicy<<-rbind(c(3,2,1,2,2),c(3,3,1,2,2),c(4,2,1,2,2),c(4,3,1,2,2))
+reopenPolicy<<-contactPolicy
 
-
+# generate results for multiple reference policies, 
+# this is for area plot
+genRef4Area<<-0
 
 ## MSAs
 # NYC, Chicago, Sacramento, Houston, Kansas City
 # msa  "5600", "1600", "6920","3360", "3760"
 # msaList<<-c("5600","1600","6920","3760")
-msaList<<-c("1600")
+msaList<<-c("3760")
 
 #####################################
 # key global variables
