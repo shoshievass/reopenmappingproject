@@ -154,11 +154,14 @@ for (m in msaList){
   
   ## contact definition for 
   # W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), 
+  # we do not consider mask here since that does not affect contacts
+  contactList <- unique(contactPolicy[,1:4])
+  
   # and M(mask), although M no impact on contact
-  for (p in 1:dim(contactPolicy)[1]){
+  for (p in 1:dim(contactList)[1]){
     
     #policy tag
-    policy <- gsub("_", "", policyTagString(contactPolicy[p,]))
+    policy <- gsub("_", "", policyTagString(contactList[p,]))
     Cp <- C
     
     ################################################
@@ -166,13 +169,13 @@ for (m in msaList){
     ################################################
  
     #work contact
-    contactW <- workContact(Th, contactPolicy[p,1])   
+    contactW <- workContact(Th, contactList[p,1])   
     #school contact
-    contactS <- schoolContact(Th, contactPolicy[p,2]) 
+    contactS <- schoolContact(Th, contactList[p,2]) 
     #neighbor contact
-    contactN <- neighborContact(Th, contactPolicy[p,3])
+    contactN <- neighborContact(Th, contactList[p,3])
     #elderly  quarantine
-    contactE <- elderQuarantine(Th, contactPolicy[p,4]) 
+    contactE <- elderQuarantine(Th, contactList[p,4]) 
     
     #contact at each level
     Cp$contactPolicy <- C$contact * (
@@ -182,7 +185,7 @@ for (m in msaList){
       (Th$contactlvl=="work") * (contactW * contactE + (1-contactE) * workContact(Th, 1)) ) # for elderly, only essential
     
     #indicate whether these individuals are actively working or work from home
-    Cp$activeEmp <- activeEmp(Th, contactPolicy[p,1], contactPolicy[p,4]) * (Th$naics_i>0)
+    Cp$activeEmp <- activeEmp(Th, contactList[p,1], contactList[p,4]) * (Th$naics_i>0)
     stopifnot(max(Cp$activeEmp)<=1)  
     
     #####################################
@@ -238,14 +241,25 @@ for (m in msaList){
     }else{
       CmatAll <- rbind(CmatAll,Cmat1)
     }
-    
   }
   
+  
+  ## for each mask policy, duplicate aggregated contact outputs
+  mList <- unique(contactPolicy[,5])
+  for (i in 1:length(mList)){
+    cmat_i <- CmatAll
+    cmat_i$PolicyID <- paste(cmat_i$PolicyID, "-M", i, sep="")
+    if (i==1){
+      CmatAllOut <- cmat_i
+    }else{
+      CmatAllOut <- rbind(CmatAllOut, cmat_i)
+    }
+  }
   #export aggregate contact matrix by age
   checkWrite(file.path(outPath, 
                        paste(ctMatData, m, "_allPolicy", ".csv", sep="")), 
-             CmatAll, "aggregate contact matrix")  
+             CmatAllOut, "aggregate contact matrix")  
   
-  rm(C, Th, Cmat, Cmat2, Cp, policy, typeVec)
+  rm(C, Th, Cmat, Cmat2, Cp, policy, typeVec, contactList, mList)
 }
 

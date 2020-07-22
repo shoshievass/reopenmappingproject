@@ -70,12 +70,15 @@ start_time <- Sys.time()
 P <- checkLoad(policyParm) 
 np <- length(grep("Scenario",colnames(P),perl=T))
 
-# aggregate key outputs
-df<-data.frame(matrix(ncol = np+6, nrow = 0, 
+# aggregate key SEIR outputs
+ageG <-c("5_17", "18_49", "50_59", "60_69", "70_79", "80")
+df<-data.frame(matrix(ncol = np+6+length(ageG)*2, nrow = 0, 
                   dimnames=list(NULL, 
                         c(paste("Policy",1:np, sep=""), 
-                          "MSA", "BaselineAdjDeaths", "BaselineAdjEmpHours", "Deaths", "EmpHoursLost", "Population"))
-                  ), stringsAsFactors=FALSE)
+                          "MSA", "BaselineAdjDeaths", "BaselineAdjEmpDays", "Deaths", "EmpDaysLost", 
+                          paste("Death", ageG, sep=""),
+                          paste("Case", ageG, sep=""),
+                          "Population"))), stringsAsFactors=FALSE)
 dfRow<-0
 policyVecName0<-rep("",np)
 

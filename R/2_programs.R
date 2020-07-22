@@ -126,22 +126,24 @@ calibratedPar <- function(place) {
   
   ## extract parameters
   I0<-as.vector(min(pData$I0))
-  beta <-as.vector(min(pData$beta1))
+  beta1<-as.vector(min(pData$beta1))
   beta2<-as.vector(min(pData$beta2))
 
-  return(list(I0=I0,beta=beta,beta2=beta2))
+  return(list(I0=I0,beta1=beta1,beta2=beta2))
 }
 
 
 # load contact matrix data -----------------------------------------------------
 loadData <- function(place,contact) {
   
+  #remove mask assumption from contact code
+  contact <- substr(contact, 1, gregexpr("-M",contact)[[1]][1]-1)
+  
   # load files
   fn <- file.path(contactMatrixPath, 
               paste(ctMatData, place, contact, ".csv", sep=""))
   CData <-checkLoad(fn)
 
-  
   ## define some global variables of types of agents
   # types
   types<<- cbind(CData[,c("ego","naics","age","sick","wfh","shift","active_emp","n")])
@@ -174,8 +176,6 @@ checkWrite <- function(fn, out, msg){
   write.table(out, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
   print(paste("save",msg,":",fn))
 }
-
-
 
 
 # get code directory  -----------------------------------------------------
@@ -232,8 +232,7 @@ loadPolicyDates <- function(m){
     date_i <- P[[colNm[dates[i]]]]
     
     #policy name tag
-    em <-ifelse(i==1,"-E2-M3","-E2-M2")
-    policyVec<-c(policyVec,paste("_",poli_i,em,sep=""))
+    policyVec<-c(policyVec,paste("_",poli_i,policyCaliEM[min(i,length(policyCaliEM))],sep=""))
     
     #start of this policy
     TVec<-c(TVec,date_i)
@@ -261,24 +260,27 @@ tagActiveEmp <- function(sim1) {
 
 # generate string policy tag names from indicator for definition of each contact level -------------------------------------
 policyTagString <- function(policyVec) {
-  policyVec <- matrix(as.matrix(policyVec), ncol=5)
-  #load calibrated parameter file
-  poli <-paste("_W",policyVec[,1],
-               "-S",policyVec[,2],
-               "-N",policyVec[,3],
-               "-E",policyVec[,4],
-               "-M",policyVec[,5],sep="")
+  # number of policies
+  n <- dim(policyVec)[2]
+  policyVec <- matrix(as.matrix(policyVec), ncol=n)
+  
+  # policy tag
+  poli <- ""
+  for (i in 1:n){
+    tag <- ifelse(i==1, "_", "-")
+    poli<- paste(poli, tag, policyLetterCode[i], policyVec[,i], sep="")
+  }
   return(poli)
 }
 
 
-
 # extract policy indciator  -------------------------------------
 parsePolicyTag <- function(policyTag, poli) {
-  #load calibrated parameter file
+  #position of letter code "poli"
   pos <- gregexpr(poli,policyTag)[[1]][1] + 1
   return(as.numeric(substr(policyTag, pos, pos)))
 }
+
 
 # policy combo matrix  -------------------------------------
 policyMatrix <- function(refPolicy,np){
@@ -313,11 +315,12 @@ genPolicy <- function(reopenPolicy,refPolicy) {
   policyFull <- t(unname(rbind(matrix(rep(refPolicy[1:(np-1)],nr),(np-1),nr),policyList)))
 
   ## all policy combo to run
-  if (dim(contactPolicy)[1]==dim(reopenPolicy)[1]){
-    # if we run all combinations, just include the main reference
-    policyCombo<<-rbind(refp[1,],policyFull)
-  }else{
+ if (genRef4Area==1){
+    # generate more reference policies for area plots
     policyCombo<<-rbind(refp,policyFull)
+  }else{
+    policyCombo<<-rbind(refp[1,],policyFull)
+    
   }
  
   return(policyCombo)
@@ -331,7 +334,7 @@ setBeta <- function(contact, par, j) {
   
   if (fixBETA==1){
     #fix at initial (high) level
-    beta<-par$beta
+    beta<-par$beta1
   }else if (fixBETA==2){
     #fix at reduced level
     beta<-par$beta2        
@@ -341,19 +344,22 @@ setBeta <- function(contact, par, j) {
     
     if (is.na(beta_i)){
       # consider reduced transmission rate in phase 2 and 3
-      beta<-ifelse(j>1,par$beta2,par$beta)
+      beta<-ifelse(j>1,par$beta2,par$beta1)
     }else{
       if (beta_i==1){
-        #further reduced beta
-        beta<-par$beta2*0.75
-      }else if (beta_i==2){
         #reduced beta (status quo in phase 2 and 3)
         beta<-par$beta2
+      }else if (beta_i==2){
+        #more beta than status quo
+        beta<-par$beta2*(2/3) + par$beta1*(1/3)
       }else if (beta_i==3){
+        #less beta than initial
+        beta<-par$beta2*(1/3) + par$beta1*(2/3)
+      }else if (beta_i==4){
         #initial beta (status quo in phase 1)
-        beta<-par$beta        
+        beta<-par$beta1
       }else(
-        stop("only support M in 1-3")
+        stop("only support M in 1-4")
       )
     }
   }
@@ -400,7 +406,9 @@ extractSeveralState <- function(stateLetterList,simRun) {
 extractFinalByAge <- function(stateLetter,simRun) {
   coln <- colnames(simRun)
   
-  ageVec<-unique(types$age)
+  # age groups
+  # we skip age group 0: 0-4, since we don't have that in replica
+  ageVec<-unique(types$age[types$age>0])
   ageOut<-rep(0,length(ageVec))
   tt <- dim(simRun)[1]
   
@@ -463,12 +471,11 @@ calOutcome<-function(simRun){
   
   ## cases
   case<-max(extractSeveralState(c("Ihc","Rq","Rqd","D"),simRun))*1e3
-  print(paste("Cumulative cases (per 100k):", 
+  print(paste("Cumulative cases (per100k):", 
               round(case))) 
   
   ## stack outputs
-  out <- matrix(c(deaths, empLoss, sum(types$n)),1,3)
-  colnames(out)<-c("Deaths", "EmpLoss", "Population")
+  out <- matrix(c(deaths, empLoss, deathByAge, caseByAge, sum(types$n)),1,3+length(caseByAge)*2)
   
   return(out)
 }
