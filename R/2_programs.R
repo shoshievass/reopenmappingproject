@@ -436,10 +436,13 @@ plotSeveralLines <- function(what2plot,colvec,simRun,ltype) {
 # compute and print key health and employment outcome of interest---------
 calOutcome<-function(simRun){
  
-  #1. cumualtive deaths
+  #1. cumualtive deaths and cases
   scal <- sum(types$n)/100
   deaths <-max(extractState("D",simRun)*scal)
   print(paste("Deaths:", round(deaths)))
+  
+  cases <-max(extractSeveralState(c("Ihc","Rq","Rqd","D"),simRun)*scal)
+  print(paste("Cases:", round(cases)))
   
   #death/cases by age
   print("Deaths in each age group")
@@ -475,7 +478,8 @@ calOutcome<-function(simRun){
               round(case))) 
   
   ## stack outputs
-  out <- matrix(c(deaths, empLoss, deathByAge, caseByAge, sum(types$n)),1,3+length(caseByAge)*2)
+  out <- matrix(c(deaths, cases, empLoss, sum(types$n), deathByAge, caseByAge),
+                1,4+length(caseByAge)*2)
   
   return(out)
 }
