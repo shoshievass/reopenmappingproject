@@ -72,10 +72,11 @@ np <- length(grep("Scenario",colnames(P),perl=T))
 
 # aggregate key SEIR outputs
 ageG <-c("5_17", "18_49", "50_59", "60_69", "70_79", "80")
-df<-data.frame(matrix(ncol = np+7+length(ageG)*2, nrow = 0, 
+df<-data.frame(matrix(ncol = np+8+length(ageG)*2, nrow = 0, 
                   dimnames=list(NULL, 
                         c(paste("Policy",1:np, sep=""), 
-                          "MSA", "BaselineAdjDeaths", "BaselineAdjEmpDays", "Deaths", "Case", "EmpDaysLost", "Population",
+                          "MSA", "BaselineAdjDeaths", "BaselineAdjCases", "BaselineAdjEmpDays", 
+                          "Deaths", "Case", "EmpDaysLost", "Population",
                           paste("Death", ageG, sep=""),
                           paste("Case", ageG, sep="")))), stringsAsFactors=FALSE)
 dfRow<-0
@@ -124,7 +125,7 @@ for (m in msaList){
     dfRow<-dfRow+1
     policyVecName <- policyVecName0
     policyVecName[1:np]<-gsub("_","",policyCombo[i,])
-    df[dfRow,]<-c(policyVecName, m, outstats_i[1:2]/outstats_ref[1:2]-1,outstats_i)
+    df[dfRow,]<-c(policyVecName, m, outstats_i[1:3]/outstats_ref[1:3]-1,outstats_i)
   }
 }
 rm(Cmat, par)
