@@ -22,6 +22,7 @@ calibratedParPath <- file.path(tempPath, "calibratedparameter")
 codePath <- file.path(proj, "R")
 outPath  <- file.path(proj, "output")
 parmPath <- file.path(proj, "parameter")
+figPath  <- file.path(outPath, "figure")
 
 #check if project directory is properly set up
 stopifnot(endsWith(proj, "reopenmappingproject"))

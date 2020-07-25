@@ -24,12 +24,13 @@ library(tidyr)
 ## check folders exist
 #####################################
 
-# check if directory exist
+# check if directories exist
 dir.create(tempPath, showWarnings = FALSE)
 dir.create(contactMatrixPath, showWarnings = FALSE)
 dir.create(calibratedParPath, showWarnings = FALSE)
 dir.create(parmPath, showWarnings = FALSE)
 dir.create(outPath, showWarnings = FALSE)
+dir.create(figPath, showWarnings = FALSE)
 
 
 
@@ -93,8 +94,8 @@ genRef4Area<<-0
 ## MSAs
 # NYC, Chicago, Sacramento, Houston, Kansas City
 # msa  "5600", "1600", "6920","3360", "3760"
-# msaList<<-c("5600","1600","6920","3760")
-msaList<<-c("1600")
+ msaList<<-c("5600","6920","3760")
+#msaList<<-c("1600")
 
 #####################################
 # key global variables
