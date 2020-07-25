@@ -9,16 +9,16 @@ This repository contains code to run estimation and simulation for [Socioeconomi
 Folder for R code
 
 #### 0_run_all.R
-Master run all scripts. Sets up directories, loads functions and runs the entire process. 
+Set up directories, load functions, and run the entire process. 
 
 #### 1_config.R
-Key files that users need to make changes corresponding to the specific run. 
+Users need to make changes here for the specific run. 
 This script includes some hardcodes for policies, locations, etc. It also arranges SEIR disease parameters.  
 
 It includes the following key sections:
 
 a. input file names
-specify file names of input data and parameters, and intermediate output
+Specify file names of input data and parameters, and intermediate outputs
 
 b. policy and locations
 Specify policies and MSAs to run. 
@@ -48,7 +48,7 @@ M: mask usage and social distancing measures
 
 c. key global variables
 specify age cohort corresponding to 60, 
-naics code for healthcare (due to special consideration of transmission from patients to healthcare workers),
+naics code for healthcare (to account for transmission from patients to healthcare workers),
 
 d. load and define SEIR parameters
 Load SEIR parameters from /parameter/seir_parameters.csv, and set up some global variables to store these parameters for the model. 
@@ -62,9 +62,9 @@ load contact matrices from /data/contact_msa<msa code>_<source>, expand types ac
 
 #### 4_grid_search.R
 We calibrate three parameters, using grid search
-beta1: initial transmission rates assuming no social distancing and mask, etc prior to lockdown policies. This corresponds to M4
-beta2: reduced transmission rates assuming some adoption of mask and distancing measures. This corresponds to M1
-I0   : initial condition in terms of the fraction of people in each type that are infected but have not yet developed symptoms
+beta1: initial transmission rates assuming no mask and social distancing measures before lockdown policies. This corresponds to M4
+beta2: reduced transmission rates assuming adoption of mask and distancing measures. This corresponds to M1
+I0: initial condition in terms of the fraction of people in each type that are infected but have not yet developed symptoms
 
 #### 5_seir.R
 Simulate SEIR models
@@ -77,19 +77,19 @@ This folder includes the following input data
 A csv file for each MSA of the contact rates by age and industry, named as "contact_msa<msa code>_<source>".
 We have two sources for contact matrices, "replica" or "fred". 
 Replica contact matrices is generated based on data from Replica. 
-FRED contact matrices is generated from publicly available synthetic population (https://fred.publichealth.pitt.edu/)
+FRED contact matrices are generated from public available synthetic population (https://fred.publichealth.pitt.edu/)
 
-Contact rates mean for a focal individual, the expected number of contact with a target individual at certain contact level. 
+Contact rates mean for a focal individual, the expected number of contact with a target individual at each contact level. 
 Each observation is for a focal age (age_i), focal industry (naics_i), target age (age_j), target industry (naics_j), and contact level (contactlvl), with the following variables
 
 num_people: number of people in each focal age and industry type
 num_contact_per_person_day: the expected number of contact with people in each target age and industry type
 contact_time_min_per_person_day: the expected number of contact weighted by duration in minutes, which we use to define contact rates in our main analysis.
 
-Age cohort largely follows CDC age group definition with more cohorts for elder population. 
+Age cohort largely follows CDC age group definition with more cohorts for the elder population. 
 Industry cohort is based on NAICS 2 digit code. 
 Please refer to age_doc.csv and naics_doc.csv in /supplement/
-Contact level includes household(hh), school, work and neighbor.
+Contact level includes household(hh), school, work, and neighborhood.
 
 
 #### Deaths and cases in the US
@@ -107,7 +107,7 @@ sick_w: probability that an individual in a MSA X age X industry has high risk t
 wfh: binary type for whether the individual can work from home, computed from O*NET following Dingel and Neiman (2020)
 wfh_w: probability that an individual in a MSA X age X industry can work from home
 shift: a binary split representing alternating schedule for both non-essential workers and students
-shift_w: probability that an individual in a MSA X age X industry belong to each of the two alternating schedule
+shift_w: probability that an individual in a MSA X age X industry belong to each of the two alternating schedules
 
 
 ### parameter/
@@ -118,17 +118,17 @@ Each row corresponds to a MSA.
 Scenario<X> correspond to the policy code for work, school and neighbor contacts in phase X.
 Date<X> are the start dates for each phase X.
 T<X> translate the start dates to integer as the number of days from March 5th, 2020. 
-Tend is the number of dates the model simulate results for. 
+Tend is the number of periods the model simulates results for. 
 
 
 #### Settings for calibrating parameters: gridsearch.csv
 Each row corresponds to a MSA. 
 We specify the lower bound (lb), upper bound (ub) and step size (step) for the first round of grid search for the three parameters we calibrate (beta1, beta2, I0)
-T_range_start and T_range_end specify the start and end dates of the time series we use to compare goodness of fit. 
+T_range_start and T_range_end specify the start and end dates of the time series we use to compare the goodness of fit. 
 
 
 #### SEIR model parameters: seir_parameters.csv
-Disease specific parameters taken from related literature. 
+Disease specific parameters are taken from related literature. 
 We allow these parameters to vary by age and health type.
 Please refer to the paper for further descriptions. 
 
@@ -151,7 +151,7 @@ Specify MSAs (msaList) and reopening policies (reopenPolicy) to run in 1_config.
 Generate contact matrices with 3_gen_contact.R
 
 Calibrate parameters with 4_grid_search.R. Check reference policies in each phases specified in parameter/msa_policy_scenarios_dates.csv
-If grid search hits boundary of some of the parameters or is running slow, please revise set up in parameter/gridsearch
+If grid search hits the boundary of some parameters or is running slow, please revise set up in parameter/gridsearch
 
 Run SEIR to generate simulation results under different reopening policies. To save compartment by type by period outputs, set outputSIR<<-1 in 1_config.R
 
