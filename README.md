@@ -13,7 +13,7 @@ Set up directories, load functions, and run the entire process.
 
 #### 1_config.R
 Users need to make changes here for the specific run. 
-This script includes some hardcodes for policies, locations, etc. It also loads SEIR disease parameters.  
+This script includes coding for policies, locations, etc. It also loads SEIR disease parameters.  
 
 It includes the following key sections:
 
