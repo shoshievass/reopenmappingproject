@@ -68,11 +68,9 @@ load contact matrices from /data/contact_msa\<msa code\>_\<source\>, expand type
 #### 4_grid_search.R
 We calibrate three parameters, using grid search
 
-beta1: initial transmission rates assuming no mask and social distancing measures before lockdown policies. This corresponds to M4.
-
-beta2: reduced transmission rates assuming adoption of mask and distancing measures. This corresponds to M1.
-
-I0: initial condition in terms of the fraction of people in each type that are infected but have not yet developed symptoms
+	beta1: initial transmission rates assuming no mask and social distancing measures before lockdown policies. This corresponds to M4;
+	beta2: reduced transmission rates assuming adoption of mask and distancing measures. This corresponds to M1;
+	I0: initial condition in terms of the fraction of people in each type that are infected but have not yet developed symptoms
 
 #### 5_seir.R
 Simulate SEIR models
@@ -90,11 +88,9 @@ FRED contact matrices are generated from public available synthetic population (
 Contact rates mean for a focal individual, the expected number of contact with a target individual at each contact level. 
 Each observation is for a focal age (age_i), focal industry (naics_i), target age (age_j), target industry (naics_j), and contact level (contactlvl), with the following variables
 
-num_people: number of people in each focal age and industry type
-
-num_contact_per_person_day: the expected number of contact with people in each target age and industry type
-
-contact_time_min_per_person_day: the expected number of contact weighted by duration in minutes, which we use to define contact rates in our main analysis.
+	num_people: number of people in each focal age and industry type;
+	num_contact_per_person_day: the expected number of contact with people in each target age and industry type;
+	contact_time_min_per_person_day: the expected number of contact weighted by duration in minutes, which we use to define contact rates in our main analysis.
 
 Age cohort largely follows CDC age group definition with more cohorts for the elder population. 
 Industry cohort is based on NAICS 2 digit code. 
@@ -112,17 +108,12 @@ and aggregate county level information to MSA level.
 ####  Adjustment for work and health types
 msa_type.csv contains the distribution of work and health types, conditional on previously defined age and industry types in each MSA. 
 
-sick: binary health type indicating whether the individual is high risk (obese or diabetic) based on MEPS (Medical Expenditure Panel Survey)
-
-sick_w: probability that an individual in a MSA X age X industry has high risk type
-
-wfh: binary type for whether the individual can work from home, computed from O*NET following Dingel and Neiman (2020)
-
-wfh_w: probability that an individual in a MSA X age X industry can work from home
-
-shift: a binary split representing alternating schedule for both non-essential workers and students
-
-shift_w: probability that an individual in a MSA X age X industry belong to each of the two alternating schedules
+	sick: binary health type indicating whether the individual is high risk (obese or diabetic) based on MEPS (Medical Expenditure Panel Survey);
+	sick_w: probability that an individual in a MSA X age X industry has high risk type;
+	wfh: binary type for whether the individual can work from home, computed from O*NET following Dingel and Neiman (2020);
+	wfh_w: probability that an individual in a MSA X age X industry can work from home;
+	shift: a binary split representing alternating schedule for both non-essential workers and students;
+	shift_w: probability that an individual in a MSA X age X industry belong to each of the two alternating schedules
 
 
 ### parameter/
@@ -131,13 +122,10 @@ This folder includes user input parameters
 ####  Lockdown and reopening policies and start dates in each MSA: msa_policy_scenarios_dates
 Each row corresponds to a MSA. 
 
-Scenario\<X\> correspond to the policy code for work, school and neighbor contacts in phase X.
-
-Date\<X\> are the start dates for each phase X.
-
-T\<X\> translate the start dates to integer as the number of days from March 5th, 2020. 
-
-Tend is the number of periods the model simulates results for. 
+	Scenario\<X\> : correspond to the policy code for work, school and neighbor contacts in phase X;
+	Date\<X\> : start dates for each phase X;
+	T\<X\> : translate the start dates to integer as the number of days from March 5th, 2020;
+	Tend: the number of periods the model simulates results for. 
 
 
 #### Settings for calibrating parameters: gridsearch.csv
@@ -162,7 +150,7 @@ Temporary folders to store intermediate outputs:
 2. Calibrated transmission and initial condition parameter in /calibratedparameter/, generated from 4_grid_search.R 
 
 ### supplement/
-This folder contains information on our age and industry cohort
+This folder contains information on our age and industry cohorts
 
 
 ## Instructions for Replication
