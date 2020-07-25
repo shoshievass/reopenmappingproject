@@ -111,7 +111,7 @@ TNAUGHT <<- as.Date(unique("3/5/2020"), "%m/%d/%Y")
 verTag <<-"_combo"
 
 
-### save detailed sir compartment X type X time level results and plots for internal checking?
+### save detailed seir compartment X type X time level results and plots for internal checking?
 outputSIR<<-0
 
 
