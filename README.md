@@ -17,9 +17,9 @@ This script includes some hardcodes for policies, locations, etc. It also loads 
 
 It includes the following key sections:
 
-1. input file names: specify file names of input data and parameters, and intermediate outputs
+1. Input file names: specify file names of input data and parameters, and intermediate outputs
 
-2. policy and locations: specify policies and MSAs to run. 
+2. Policy and locations: specify policies and MSAs to run. 
 
 Policies code names have the following convention:
 
@@ -54,16 +54,16 @@ M: mask usage and social distancing measures
 	M3: not consistent;
 	M4: rare
 
-3. key global variables: specify age cohort corresponding to 60. Naics code for healthcare (to account for transmission from patients to healthcare workers),
+3. Key global variables: specify age cohort corresponding to 60. Naics code for healthcare (to account for transmission from patients to healthcare workers),
 
-4. load and define SEIR parameters: load SEIR parameters from /parameter/seir_parameters.csv, and set up some global variables to store these parameters for simulations. 
+4. Load and define SEIR parameters: load SEIR parameters from /parameter/seir_parameters.csv, and set up some global variables to store these parameters for simulations. 
 
 
 #### 2_programs.R
-library of functions used across R scripts
+Library of functions used across R scripts
 
 #### 3_gen_contact.R
-load contact matrices from /data/contact_msa\<msa code\>_\<source\>, expand types according to /data/msa_type.csv, and define contacts under different policies.
+Load contact matrices from /data/contact_msa\<msa code\>_\<source\>, expand types according to /data/msa_type.csv, and define contacts under different policies.
 
 #### 4_grid_search.R
 We calibrate three parameters, using grid search
@@ -138,8 +138,9 @@ We allow these parameters to vary by age and health type.
 Please refer to the paper for further descriptions. 
 
 ### output/
-/csv: SEIR model simulation results for each compartment by type and dates
-/figure: plot selected compartment for internal checking purposes
+/csv/: SEIR model simulation results for each compartment by type and period
+
+/figure/: plot time series of selected compartments for internal checking purposes
 
 ### temp/
 Temporary folders to store intermediate outputs:
