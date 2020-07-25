@@ -122,9 +122,9 @@ This folder includes user input parameters
 ####  Lockdown and reopening policies and start dates in each MSA: msa_policy_scenarios_dates
 Each row corresponds to a MSA. 
 
-	Scenario\<X\> : correspond to the policy code for work, school and neighbor contacts in phase X;
-	Date\<X\> : start dates for each phase X;
-	T\<X\> : translate the start dates to integer as the number of days from March 5th, 2020;
+	Scenario<X> : correspond to the policy code for work, school and neighbor contacts in phase X;
+	Date<X> : start dates for each phase X;
+	T<X> : translate the start dates to integer as the number of days from March 5th, 2020;
 	Tend: the number of periods the model simulates results for. 
 
 
