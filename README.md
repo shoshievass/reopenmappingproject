@@ -17,53 +17,61 @@ This script includes some hardcodes for policies, locations, etc. It also arrang
 
 It includes the following key sections:
 
-a. input file names
-Specify file names of input data and parameters, and intermediate outputs
+1. input file names: specify file names of input data and parameters, and intermediate outputs
 
-b. policy and locations
-Specify policies and MSAs to run. 
+2. policy and locations: specify policies and MSAs to run. 
 
-Policies code names have the following convention
-W: work contact. 
-	W1: essential work only
-	W2: remote if possible
-	W3: alternate schedules
+Policies code names have the following convention:
+
+W: work contact
+
+	W1: essential work only;
+	W2: remote if possible;
+	W3: alternate schedules;
 	W4: all in-person
+	
 S: school contact
-	S1: online
-	S2: alternate schedules 
+
+	S1: online;
+	S2: alternate schedules;
 	S3: all in-person
+	
 N: neighbor contact
-	N1: necessities only
-	N2: moderate interaction
+
+	N1: necessities only;
+	N2: moderate interaction;
 	N3: all in-person
+	
 E: protect elderly
-	E1: isolate 60+ 
+
+	E1: isolate 60+; 
 	E2: no specific policies
+	
 M: mask usage and social distancing measures 
-	M1: widespread use of mask
-	M2: mostly consistent
-	M3: not consistent
+
+	M1: widespread mask usage and social distancing;
+	M2: mostly consistent;
+	M3: not consistent;
 	M4: rare
 
-c. key global variables
-specify age cohort corresponding to 60, 
-naics code for healthcare (to account for transmission from patients to healthcare workers),
+3. key global variables: specify age cohort corresponding to 60. Naics code for healthcare (to account for transmission from patients to healthcare workers),
 
-d. load and define SEIR parameters
-Load SEIR parameters from /parameter/seir_parameters.csv, and set up some global variables to store these parameters for the model. 
+4. load and define SEIR parameters: load SEIR parameters from /parameter/seir_parameters.csv, and set up some global variables to store these parameters for the model. 
 
 
 #### 2_programs.R
 library of functions used across R scripts
 
 #### 3_gen_contact.R
-load contact matrices from /data/contact_msa<msa code>_<source>, expand types according to /data/msa_type.csv, and define contacts under different policies.
+load contact matrices from /data/contact_msa\<msa code\>_\<source\>, expand types according to /data/msa_type.csv, and define contacts under different policies.
 
 #### 4_grid_search.R
 We calibrate three parameters, using grid search
-beta1: initial transmission rates assuming no mask and social distancing measures before lockdown policies. This corresponds to M4
-beta2: reduced transmission rates assuming adoption of mask and distancing measures. This corresponds to M1
+
+beta1: initial transmission rates assuming no mask and social distancing measures before lockdown policies. This corresponds to M4.
+
+beta2: reduced transmission rates assuming adoption of mask and distancing measures. This corresponds to M1.
+
 I0: initial condition in terms of the fraction of people in each type that are infected but have not yet developed symptoms
 
 #### 5_seir.R
@@ -75,7 +83,7 @@ This folder includes the following input data
 
 #### Contact matrices
 A csv file for each MSA of the contact rates by age and industry, named as "contact_msa<msa code>_<source>".
-We have two sources for contact matrices, "replica" or "fred". 
+We have two sources for contact matrices: "replica" or "fred". 
 Replica contact matrices is generated based on data from Replica. 
 FRED contact matrices are generated from public available synthetic population (https://fred.publichealth.pitt.edu/)
 
@@ -83,12 +91,14 @@ Contact rates mean for a focal individual, the expected number of contact with a
 Each observation is for a focal age (age_i), focal industry (naics_i), target age (age_j), target industry (naics_j), and contact level (contactlvl), with the following variables
 
 num_people: number of people in each focal age and industry type
+
 num_contact_per_person_day: the expected number of contact with people in each target age and industry type
+
 contact_time_min_per_person_day: the expected number of contact weighted by duration in minutes, which we use to define contact rates in our main analysis.
 
 Age cohort largely follows CDC age group definition with more cohorts for the elder population. 
 Industry cohort is based on NAICS 2 digit code. 
-Please refer to age_doc.csv and naics_doc.csv in /supplement/
+Please refer to age_doc.csv and naics_doc.csv in supplement/
 Contact level includes household(hh), school, work, and neighborhood.
 
 
@@ -103,10 +113,15 @@ and aggregate county level information to MSA level.
 msa_type.csv contains the distribution of work and health types, conditional on previously defined age and industry types in each MSA. 
 
 sick: binary health type indicating whether the individual is high risk (obese or diabetic) based on MEPS (Medical Expenditure Panel Survey)
+
 sick_w: probability that an individual in a MSA X age X industry has high risk type
+
 wfh: binary type for whether the individual can work from home, computed from O*NET following Dingel and Neiman (2020)
+
 wfh_w: probability that an individual in a MSA X age X industry can work from home
+
 shift: a binary split representing alternating schedule for both non-essential workers and students
+
 shift_w: probability that an individual in a MSA X age X industry belong to each of the two alternating schedules
 
 
@@ -115,14 +130,19 @@ This folder includes user input parameters
 
 ####  Lockdown and reopening policies and start dates in each MSA: msa_policy_scenarios_dates
 Each row corresponds to a MSA. 
-Scenario<X> correspond to the policy code for work, school and neighbor contacts in phase X.
-Date<X> are the start dates for each phase X.
-T<X> translate the start dates to integer as the number of days from March 5th, 2020. 
+
+Scenario\<X\> correspond to the policy code for work, school and neighbor contacts in phase X.
+
+Date\<X\> are the start dates for each phase X.
+
+T\<X\> translate the start dates to integer as the number of days from March 5th, 2020. 
+
 Tend is the number of periods the model simulates results for. 
 
 
 #### Settings for calibrating parameters: gridsearch.csv
 Each row corresponds to a MSA. 
+
 We specify the lower bound (lb), upper bound (ub) and step size (step) for the first round of grid search for the three parameters we calibrate (beta1, beta2, I0)
 T_range_start and T_range_end specify the start and end dates of the time series we use to compare the goodness of fit. 
 
