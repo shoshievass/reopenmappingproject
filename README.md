@@ -13,7 +13,7 @@ Set up directories, load functions, and run the entire process.
 
 #### 1_config.R
 Users need to make changes here for the specific run. 
-This script includes some hardcodes for policies, locations, etc. It also arranges SEIR disease parameters.  
+This script includes some hardcodes for policies, locations, etc. It also loads SEIR disease parameters.  
 
 It includes the following key sections:
 
@@ -56,7 +56,7 @@ M: mask usage and social distancing measures
 
 3. key global variables: specify age cohort corresponding to 60. Naics code for healthcare (to account for transmission from patients to healthcare workers),
 
-4. load and define SEIR parameters: load SEIR parameters from /parameter/seir_parameters.csv, and set up some global variables to store these parameters for the model. 
+4. load and define SEIR parameters: load SEIR parameters from /parameter/seir_parameters.csv, and set up some global variables to store these parameters for simulations. 
 
 
 #### 2_programs.R
@@ -109,11 +109,11 @@ and aggregate county level information to MSA level.
 msa_type.csv contains the distribution of work and health types, conditional on previously defined age and industry types in each MSA. 
 
 	sick: binary health type indicating whether the individual is high risk (obese or diabetic) based on MEPS (Medical Expenditure Panel Survey);
-	sick_w: probability that an individual in a MSA X age X industry has high risk type;
+	sick_w: probability an individual in a MSA X age X industry is high risk;
 	wfh: binary type for whether the individual can work from home, computed from O*NET following Dingel and Neiman (2020);
-	wfh_w: probability that an individual in a MSA X age X industry can work from home;
-	shift: a binary split representing alternating schedule for both non-essential workers and students;
-	shift_w: probability that an individual in a MSA X age X industry belong to each of the two alternating schedules
+	wfh_w: probability an individual in a MSA X age X industry can work from home;
+	shift: a binary split representing alternating schedules for non-essential workers and students;
+	shift_w: probability an individual in a MSA X age X industry is in each of the two alternating schedules
 
 
 ### parameter/
@@ -129,10 +129,7 @@ Each row corresponds to a MSA.
 
 
 #### Settings for calibrating parameters: gridsearch.csv
-Each row corresponds to a MSA. 
-
-We specify the lower bound (lb), upper bound (ub) and step size (step) for the first round of grid search for the three parameters we calibrate (beta1, beta2, I0)
-T_range_start and T_range_end specify the start and end dates of the time series we use to compare the goodness of fit. 
+Each row corresponds to a MSA. We specify the lower bound (lb), upper bound (ub) and step size (step) for the first round of grid search for the three parameters we calibrate (beta1, beta2, I0). T_range_start and T_range_end specify the start and end dates of the time series we use to measure the goodness of fit. 
 
 
 #### SEIR model parameters: seir_parameters.csv
