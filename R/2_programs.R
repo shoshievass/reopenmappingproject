@@ -49,7 +49,7 @@ SEIIRRD_model=function(t, x, vparameters){
     healthNeed <- as.vector( sum(Ihc) / sum((S+E+Ia+Ins+Rqd+Rnq) * healthVec))
       
     #transition
-    dS   = -as.matrix(S*beta*scalBETA)*(as.matrix(Cmat)%*%as.matrix((Ia+Ins)/N)) - as.matrix(S*betaH)*healthNeed*healthVec
+    dS   = -as.matrix(S*beta)*(as.matrix(Cmat)%*%as.matrix((Ia+Ins)/N)) - as.matrix(S*betaH)*healthNeed*healthVec
     dE   = -epsilonV*as.matrix(E) -dS 
     dIa  = +epsilonV*as.matrix(E) -tauV*as.matrix(Ia)                              
     dIns =                        +tauV*as.matrix(Ia)*(1-psi) -gamma*as.matrix(Ins)  
@@ -327,41 +327,30 @@ genPolicy <- function(reopenPolicy,refPolicy) {
 }
 
 
-# set transmission rate beta in SIR model  -------------------------------------
+# set transmission rate  -------------------------------------
 setBeta <- function(contact, par, j) {
-  #transmission rate
- 
-  
-  if (fixBETA==1){
-    #fix at initial (high) level
-    beta<-par$beta1
-  }else if (fixBETA==2){
-    #fix at reduced level
-    beta<-par$beta2        
-  }else{
-    #any policy assumption on transmission rate
-    beta_i <- parsePolicyTag(contact, "M")
+  #any policy assumption on transmission rate
+  beta_i <- parsePolicyTag(contact, "M")
     
-    if (is.na(beta_i)){
-      # consider reduced transmission rate in phase 2 and 3
-      beta<-ifelse(j>1,par$beta2,par$beta1)
-    }else{
-      if (beta_i==1){
-        #reduced beta (status quo in phase 2 and 3)
-        beta<-par$beta2
-      }else if (beta_i==2){
-        #more beta than status quo
-        beta<-par$beta2*(2/3) + par$beta1*(1/3)
-      }else if (beta_i==3){
-        #less beta than initial
-        beta<-par$beta2*(1/3) + par$beta1*(2/3)
-      }else if (beta_i==4){
-        #initial beta (status quo in phase 1)
-        beta<-par$beta1
-      }else(
-        stop("only support M in 1-4")
-      )
-    }
+  if (is.na(beta_i)){
+    # consider reduced transmission rate in phase 2 and 3
+    beta<-ifelse(j>1,par$beta2,par$beta1)
+  }else{
+    if (beta_i==1){
+      #reduced beta (status quo in phase 2 and 3)
+      beta<-par$beta2
+    }else if (beta_i==2){
+      #more beta than status quo
+      beta<-par$beta2*(2/3) + par$beta1*(1/3)
+    }else if (beta_i==3){
+      #less beta than initial
+      beta<-par$beta2*(1/3) + par$beta1*(2/3)
+    }else if (beta_i==4){
+      #initial beta (status quo in phase 1)
+      beta<-par$beta1
+    }else(
+      stop("only support M in 1-4")
+    )
   }
   return(beta)
 }
