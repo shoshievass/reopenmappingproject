@@ -118,6 +118,12 @@ for (m in msaList){
   # load contact
   C <-loadCmat(paste("contact_msa", m, sep=""))
   
+  # we might no have duration weight in all sources of contact matrics
+  if (("contact_time_min_per_person_day" %in% colnames(C))==FALSE){
+    C$contact_time_min_per_person_day=60
+    print("duration is missing from contact matrix. Weight all contacts equally")
+  }
+  
   # load types
   TYPE <-checkLoad(msaType)
   TYPE <-TYPE[TYPE$msa==m,!(colnames(TYPE) %in% c("msaname"))]

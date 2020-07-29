@@ -99,7 +99,7 @@ Contact level includes household(hh), school, work, and neighborhood.
 
 
 #### Deaths and cases in the US
-Time series of cumulative deaths and cases by MSA in the US: covid_case_death_jh.csv 
+Time series of cumulative deaths and cases by MSA in the US: covid_case_death_jh.csv. 
 We download deaths and cases in the US from COVID-19 Data Repository by the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University, 
 and aggregate county level information to MSA level. 
 
@@ -156,7 +156,7 @@ Specify MSAs (msaList) and reopening policies (reopenPolicy) to run in 1_config.
 
 Generate contact matrices with 3_gen_contact.R
 
-Calibrate parameters with 4_grid_search.R. Check reference policies in each phases specified in parameter/msa_policy_scenarios_dates.csv
+Calibrate parameters with 4_grid_search.R. Check reference policies in each phases specified in parameter/msa_policy_scenarios_dates.csv.
 If grid search hits the boundary of some parameters or is running slow, please revise set up in parameter/gridsearch
 
 Run SEIR to generate simulation results under different reopening policies. To save compartment by type by period outputs, set outputSIR<<-1 in 1_config.R
