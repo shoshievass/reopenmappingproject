@@ -2,9 +2,9 @@
 
 This repository contains code to run estimation and simulation for [Socioeconomic Network Heterogeneity and Pandemic Policy Response](https://www.nber.org/papers/w27374). Directory structure and instructions for use below. Code for the [website](http://www.reopenmappingproject.com/) is [here](https://github.com/dalek2point3/reopen-website/).
 
-If you use code or data in this github in your research, please use the following citation: 
+If you use code or data in this repository for your research, please use the following citation: 
 
-Akbarpour, Mohammad and Cook, Cody and Marzuoli, Aude and Mongey, Simon and Nagaraj, Abhishek and Saccarola, Matteo and Tebaldi, Pietro and Vasserman, Shoshana and Yang, Hanbin, Socioeconomic Network Heterogeneity and Pandemic Policy Response (June 2020). NBER Working Paper No. w27374
+Akbarpour, Mohammad, Cody Cook, Aude Marzuoli, Simon Mongey, Abhishek Nagaraj, Matteo Saccarola, Pietro Tebaldi, Shoshana Vasserman, and Hanbin Yang. "Socioeconomic Network Heterogeneity and Pandemic Policy Response." NBER Working Paper No. w27374 (2020).
 
 ## Directory Contents
 
