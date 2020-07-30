@@ -120,8 +120,8 @@ for (m in msaList){
   
   # we might no have duration weight in all sources of contact matrics
   if (("contact_time_min_per_person_day" %in% colnames(C))==FALSE){
-    C$contact_time_min_per_person_day=60
-    print("duration is missing from contact matrix. Weight all contacts equally")
+    C$contact_time_min_per_person_day<-C$num_contact_per_person_day * 60 * 16
+    print("duration is missing from contact matrix. Weight all contacts equally and scale by 16 hours")
   }
   
   # load types
