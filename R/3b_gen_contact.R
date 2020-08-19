@@ -193,16 +193,6 @@ for (m in msaList){
             "essential_i","essential_j","contactlvl")]
   
   
-  
-  
-  
-  ####### TBD ##########
-  # individual i and j who work onsite
-  Th$onsite_i  <- (Th$naics_i>0) * (Th$wfh_i==0)
-  Th$onsite_j  <- (Th$naics_j>0) * (Th$wfh_j==0)
-  Th$offsite_i <- (Th$naics_i>0) * (Th$wfh_i==1)
-  Th$offsite_j <- (Th$naics_j>0) * (Th$wfh_j==1)
-  
   ## contact definition for 
   # W(work), S(school), N(neighbor), B(bar/restuarant), R(retail), P(personal services), F(entertainment)
   # and whether we quarantine E(elderly), 
@@ -217,7 +207,7 @@ for (m in msaList){
   for (p in 1:dim(contactList)[1]){
     
     # wfh but POI open.....
-    p = 1150
+    #p = 1150
     
     
     #policy tag
@@ -265,84 +255,6 @@ for (m in msaList){
                               contactList[p,1], contactList[p,nPoli], poiContact) * (Th$naics_i>0)
     stopifnot(max(Cp$activeEmp)<=1)  
     
-    
-    #####################################
-    ### TBD
-    #####################################    
-    
-    # those who work on site
-    Cp$onsite_i  = Th$onsite_i
-    Cp$onsite_j  = Th$onsite_j
-    Cp$offsite_i = Th$offsite_i
-    Cp$offsite_j = Th$offsite_j
-
-    
-    ## don't need the full matrix here, just those non essential workers who cannot work from home
-    CpFp <- Cp[Cp$contactlvl=="work" & Cp$naics_i>0 & Cp$wfh_i==0, ]
-    CpFp$original_onsite_i <- CpFp$onsite_i
-    CpFp$original_onsite_j <- CpFp$onsite_j
-    onsite_old <- CpFp$onsite_i
-    
-    CpFp$idx <- seq.int(nrow(CpFp))
-    
-    # fix point
-    onsite_iter <-c()
-    i <-1
-    err<-999
-    while (err>0.001 | i>100){
-      frac_on <- sum(CpFp$onsite_i*CpFp$num_people)/sum(CpFp$num_people)
-      onsite_iter<-c(onsite_iter, frac_on)
-      if (i==1 & frac_on<1){
-        stop("initially non-work from home workers should all work on-site")
-      }
-      print(paste("iteration", i, ": on-site fraction", format(frac_on,digits=4), "... error =",format(err,digits=4)))
-      
-      # what fraction of all contacts at work for individual i is lost because some individual j is not comming on site
-      Cp_1 =  CpFp %>% 
-        group_by(age_i, naics_i, work_poi_i, sick_i, wfh_i, shift_i) %>% 
-        summarise(offsetContact = mean(offsite_j * contact), 
-                  allContact    = mean(contact)) %>%
-        mutate(offsite_i_prime = offsetContact/allContact) %>%
-        select(-(offsetContact:allContact))
-      
-      
-      #update onsite/offsite status of worker i
-      CpFp <- merge(x = CpFp, y = Cp_1, by = c("age_i","naics_i","work_poi_i","sick_i","wfh_i","shift_i"), all = TRUE)
-      CpFp$offsite_i <- pmax(CpFp$offsite_i,  CpFp$offsite_i_prime, na.rm=TRUE)
-      CpFp$onsite_i  <- (CpFp$original_onsite_i==1) * (1-CpFp$offsite_i)
-      if (min(CpFp$offsite_i,CpFp$onsite_i)<0 | max(CpFp$offsite_i,CpFp$onsite_i)>1){
-        stop("onsite or offset indicators out of [0,1] bounds")
-      }
-      
-      # switch i and j updated offsite and update onsite/offiste status of worker j
-      colnames(Cp_1) <- gsub("_i", "_j", colnames(Cp_1))
-      CpFp <- merge(x = CpFp, y = Cp_1, by = c("age_j","naics_j","work_poi_j","sick_j","wfh_j","shift_j"), all = TRUE)
-      CpFp$offsite_j <- pmax(CpFp$offsite_j,  CpFp$offsite_j_prime, na.rm=TRUE)
-      CpFp$onsite_j  <- (CpFp$original_onsite_j==1) * (1-CpFp$offsite_j)
-      if (min(CpFp$offsite_j,CpFp$onsite_j)<0 | max(CpFp$offsite_j,CpFp$onsite_j)>1){
-        stop("onsite or offset indicators out of [0,1] bounds")
-      }
-      
-      # sort and re-arrange
-      CpFp <-CpFp[order(CpFp$idx), !(colnames(CpFp) %in% c("offsite_i_prime", "offsite_j_prime"))]
-     
-      onsite_new <- CpFp$onsite_i
-      
-      err <- max(abs(onsite_new-onsite_old))
-      onsite_old <- onsite_new
-      i <- i+1
-    }
-    plot(1:length(onsite_iter_5600), 100*onsite_iter_5600, 
-         type="l", ylab="non-WFH & non-essential workers still employed (%)", xlab="iteration")
-    lines(1:length(onsite_iter), 100*onsite_iter, type="l", col="red")
-    legend("topright",
-           legend=c("NYC", "Sacramento"),
-           col=c("black", "red"),horiz=F,lwd=1.3,bty="n",cex=1)
-    
-    
-    #####################################
-    ### TBD END HERE
-    #####################################    
     
     #####################################
     ### contact matrix for each policy

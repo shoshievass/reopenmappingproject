@@ -11,23 +11,24 @@
 rm(list = ls())
 
 ## set up directory
-dir<-Sys.getenv("HOME")
+dir<-dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(dir)
+setwd('..')
+proj<-getwd()
+dataPath <- file.path(proj, "data")
+tempPath <- file.path(proj, "temp")
+contactMatrixPath <- file.path(tempPath, "contactmatrix")
+calibratedParPath <- file.path(tempPath, "calibratedparameter")
+codePath <- file.path(proj, "R")
+outPath  <- file.path(proj, "output")
+parmPath <- file.path(proj, "parameter")
 
-if (dir=="/Users/hanyang") {
-  proj <- paste(dir, "Documents","GitHub","reopenmappingproject", sep="/")
-  stopifnot(dir.exists(proj))
-  dataPath <- paste(proj, "data", sep="/")
-  codePath <- paste(proj, "R",    sep="/")
-  outPath  <- paste(proj, "output", sep="/")
-  parmPath <- paste(proj, "parameter", sep="/")
-} 
 #check if project directory is properly set up
 stopifnot(endsWith(proj, "reopenmappingproject"))
-setwd(proj)
 
 
-## set up global varibales and functions
-source(paste(codePath,"2_programs.R",sep='/'))
+## set up global variables and functions
+source(file.path(codePath,"2_programs.R"))
 source(getCodePath("1_config.R"))
 
 
@@ -35,10 +36,10 @@ source(getCodePath("1_config.R"))
 source(getCodePath("3b_gen_contact.R"))
 
 ## run grid search 
-source(getCodePath("4_grid_search_v2.R"))
+source(getCodePath("4_grid_search.R"))
 
 ## run SIR
-source(getCodePath("5_sir.R"))
+source(getCodePath("5_seir.R"))
 
 
 

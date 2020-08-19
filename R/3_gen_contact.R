@@ -52,9 +52,9 @@ schoolContact <- function(Th, poli) {
 ### contact at neighborhood
 neighborContact <- function(Th, poli){
   if (poli==1){
-    contactN<-0.1
+    contactN<-1/3
   }else if (poli==2){
-    contactN<-0.5
+    contactN<-2/3
   }else if (poli==3){
     contactN<-1
   }else{
@@ -95,7 +95,7 @@ activeEmp <- function(Th, W, E) {
   if (E==1){
     # 60+ only essential or WFH
     activeW <- (Th$age_i< age60) * activeW + 
-               (Th$age_i>=age60) * pmax(Th$essential_i,Th$wfh_i)
+      (Th$age_i>=age60) * pmax(Th$essential_i,Th$wfh_i)
   }
   
   return(activeW)
@@ -116,11 +116,16 @@ for (m in msaList){
   ### load data
   #####################################
   # load contact
-  fn<- paste(dataPath, paste("contact_msa", m, "_", getCmatSource(m), ".csv",sep=""), sep="/")
-  C <-checkLoad(fn)
+  C <-loadCmat(paste("contact_msa", m, sep=""))
+  
+  # we might no have duration weight in all sources of contact matrics
+  if (("contact_time_min_per_person_day" %in% colnames(C))==FALSE){
+    C$contact_time_min_per_person_day<-C$num_contact_per_person_day * 60 * 16
+    print("duration is missing from contact matrix. Weight all contacts equally and scale by 16 hours")
+  }
   
   # load types
-  TYPE <-checkLoad(paste(dataPath, "msa_type.csv", sep="/"))
+  TYPE <-checkLoad(msaType)
   TYPE <-TYPE[TYPE$msa==m,!(colnames(TYPE) %in% c("msaname"))]
   
   # types for individual i and j
@@ -143,8 +148,9 @@ for (m in msaList){
   typeVec <-c("age", "naics", "sick", "wfh", "shift")
   
   ## adjust number of people and contact by weight for health, WFH, and shift types 
+  # we use contact weighted by overlap duration (data is in minute and we translate into hours)
   C$num_people<-C$num_people * (C$sick_w_i * C$shift_w_i * C$wfh_w_i)
-  C$num_contact_per_person_day<-C$num_contact_per_person_day * (C$sick_w_j * C$shift_w_j * C$wfh_w_j) 
+  C$contact<-(C$contact_time_min_per_person_day / 60 ) * (C$sick_w_j * C$shift_w_j * C$wfh_w_j) 
   
   # type space for individual i and j
   # define contact between type i and j, and work status for each type i
@@ -154,11 +160,14 @@ for (m in msaList){
   
   ## contact definition for 
   # W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), 
+  # we do not consider mask here since that does not affect contacts
+  contactList <- unique(contactPolicy[,1:4])
+  
   # and M(mask), although M no impact on contact
-  for (p in 1:dim(contactPolicy)[1]){
+  for (p in 1:dim(contactList)[1]){
     
     #policy tag
-    policy <- gsub("_", "", policyTagString(contactPolicy[p,]))
+    policy <- gsub("_", "", policyTagString(contactList[p,]))
     Cp <- C
     
     ################################################
@@ -166,23 +175,23 @@ for (m in msaList){
     ################################################
     
     #work contact
-    contactW <- workContact(Th, contactPolicy[p,1])   
+    contactW <- workContact(Th, contactList[p,1])   
     #school contact
-    contactS <- schoolContact(Th, contactPolicy[p,2]) 
+    contactS <- schoolContact(Th, contactList[p,2]) 
     #neighbor contact
-    contactN <- neighborContact(Th, contactPolicy[p,3])
+    contactN <- neighborContact(Th, contactList[p,3])
     #elderly  quarantine
-    contactE <- elderQuarantine(Th, contactPolicy[p,4]) 
+    contactE <- elderQuarantine(Th, contactList[p,4]) 
     
     #contact at each level
-    Cp$contactPolicy <- C$num_contact_per_person_day * (
+    Cp$contactPolicy <- C$contact * (
       (Th$contactlvl=="hh") + 
-      (Th$contactlvl=="school")   * contactS + 
-      (Th$contactlvl=="neighbor") * contactN + 
-      (Th$contactlvl=="work") * (contactW * contactE + (1-contactE) * workContact(Th, 1)) ) # for elderly, only essential
+        (Th$contactlvl=="school")   * contactS + 
+        (Th$contactlvl=="neighbor") * contactN + 
+        (Th$contactlvl=="work") * (contactW * contactE + (1-contactE) * workContact(Th, 1)) ) # for elderly, only essential
     
     #indicate whether these individuals are actively working or work from home
-    Cp$activeEmp <- activeEmp(Th, contactPolicy[p,1], contactPolicy[p,4]) * (Th$naics_i>0)
+    Cp$activeEmp <- activeEmp(Th, contactList[p,1], contactList[p,4]) * (Th$naics_i>0)
     stopifnot(max(Cp$activeEmp)<=1)  
     
     #####################################
@@ -202,6 +211,9 @@ for (m in msaList){
       Cmat$age_i, Cmat$naics_i, Cmat$sick_i, Cmat$wfh_i, Cmat$shift_i, drop = TRUE, lex.order = TRUE))
     Cmat$rate <- as.integer(interaction(
       Cmat$age_j, Cmat$naics_j, Cmat$sick_j, Cmat$wfh_j, Cmat$shift_j, drop = TRUE, lex.order = TRUE))
+    if(length(unique(Cmat$ego)) != length(unique(Cmat$rate))){
+      stop("focal and target types in the contact matrix need to be the same!")
+    }
     
     #reshape long to wide
     Cmat2 <- Cmat[,!(colnames(Cmat) %in% paste(typeVec,"j",sep="_"))] %>% 
@@ -211,14 +223,14 @@ for (m in msaList){
     #check dimensions, 
     #there are 8 additional columns for number of people, active work status, 
     #5 types columns and 1 indicator for all posible types
-    stopifnot((dim(Cmat2)[2]-dim(Cmat2)[1])==(length(typeVec)+3))
+    if ((dim(Cmat2)[2]-dim(Cmat2)[1])!=(length(typeVec)+3)){
+      stop("contact matrix dimensions do not match")
+    }
     
-    #export csv
-    fn <- paste(dataPath, 
-                paste(ctMatData, m, "_", policy, datv, ".csv", sep=""), sep="/")
-    write.table(Cmat2, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
-    print(paste("export contact matrix:",fn))
-    
+    #export contact matrix csv
+    checkWrite(file.path(contactMatrixPath, 
+                         paste(ctMatData, m, "_", policy, ".csv", sep="")), 
+               Cmat2, "contact matrix")
     
     #collapse to lower dimension contact matrix
     Cmat1 <- Cmat %>% 
@@ -235,10 +247,9 @@ for (m in msaList){
     }else{
       CmatAll <- rbind(CmatAll,Cmat1)
     }
-    
   }
   
-
+  
   ## for each mask policy, duplicate aggregated contact outputs
   mList <- unique(contactPolicy[,5])
   for (i in 1:length(mList)){
@@ -250,14 +261,11 @@ for (m in msaList){
       CmatAllOut <- rbind(CmatAllOut, cmat_i)
     }
   }
-  
   #export aggregate contact matrix by age
-  fn <- paste(outPath, 
-              paste(ctMatData, m, "_allPolicy", datv, ".csv", sep=""), sep="/")
-  write.table(CmatAll, file=fn, sep=",",col.names=TRUE,row.names=FALSE)
-  print(paste("aggregate contact matrix:",fn))
+  checkWrite(file.path(outPath, 
+                       paste(ctMatData, m, "_allPolicy", ".csv", sep="")), 
+             CmatAllOut, "aggregate contact matrix")  
   
-  
-  rm(C, Th, Cmat, Cmat2, Cp, policy, typeVec)
+  rm(C, Th, Cmat, Cmat2, Cp, policy, typeVec, contactList, mList)
 }
 
