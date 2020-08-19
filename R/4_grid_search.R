@@ -17,9 +17,12 @@ gridPar <- function(parm, R0scale){
   beta2<-parm[[3]]/R0scale
   
   ### initial condition
-  I0<-exp(parm[[2]])
-  return(list(I0=I0,beta1=beta1,beta2=beta2))
+  I0<-exp(parm[[3]])
+  if(I0<=0) stop("initial infected fraction needs to be >0!")
+  
+  return(list(beta1=beta1,beta2=beta2,I0=I0))
 }
+
   
   
   
@@ -175,8 +178,12 @@ grid_search <- function(place, covid, rangeToT){
     abline(v=TTTcali[2], col="gray")
     
     ## check within grid search boundary
-    if(min((g0<ub) * (g0>lb))!=1){
-      print(rbind(lb,g0,ub))
+    if(min((g0<ub) * (g0>lb))!=1) {
+      parmOut<-rbind(lb,g0,ub)
+      colnames(parmOut)<-c("beta1","beta2","I0")
+      rownames(parmOut)<-c("lower bound", "grid search", "upper bound")
+      print(parmOut)
+      stop(paste("grid search hits boundary. Revise range of grid search in", gsParm))
     }
     stopifnot(min((g0<ub) * (g0>lb))==1)
     runOK<-ifelse(j==4,1,0)

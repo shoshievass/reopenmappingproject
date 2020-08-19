@@ -238,6 +238,19 @@ for (m in msaList){
     
   }
   
+
+  ## for each mask policy, duplicate aggregated contact outputs
+  mList <- unique(contactPolicy[,5])
+  for (i in 1:length(mList)){
+    cmat_i <- CmatAll
+    cmat_i$PolicyID <- paste(cmat_i$PolicyID, "-M", i, sep="")
+    if (i==1){
+      CmatAllOut <- cmat_i
+    }else{
+      CmatAllOut <- rbind(CmatAllOut, cmat_i)
+    }
+  }
+  
   #export aggregate contact matrix by age
   fn <- paste(outPath, 
               paste(ctMatData, m, "_allPolicy", datv, ".csv", sep=""), sep="/")

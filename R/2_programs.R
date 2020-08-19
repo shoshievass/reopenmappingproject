@@ -143,13 +143,13 @@ loadData <- function(place,contact) {
   
   ## define some global variables of types of agents
   # types
-  types<<- cbind(CData[,c("ego","naics","age","sick","wfh","shift","active_emp","n")])
+  types<<- cbind(CData[,c("ego","naics","age","sick","wfh","shift","work_poi","active_emp","n")])
   
   #age X sick (age*10 + sick)
   ageSickVec <<-match(CData$age*10 + CData$sick, typeAgeSick)
 
   #healthcare worker
-  healthVec <<-CData$naics==heathNAICS
+  healthVec <<-(CData$naics==heathNAICS) * (CData$work_poi==0)
   
   #contact matrix
   Cmat <- as.matrix(CData[,grepl("rate", colnames(CData))])
@@ -163,7 +163,7 @@ checkLoad <- function(fn) {
   if (!file.exists(fn)){
     stop(paste("missing input file : ", fn, sep=""))
   }
-  return(read.csv(fn, header=TRUE))
+  return(read.csv(fn, header=TRUE, stringsAsFactors = FALSE))
 }
 
 
@@ -177,9 +177,64 @@ getCodePath <- function(filename){
   return(out)
 }
 
-# get contact matrix data source  -----------------------------------------------------
-getCmatSource <- function(m){
-  return(Csource[[paste("msa", m, sep="")]])
+# check contact matrix source and load -----------------------------------------------------
+loadCmat <- function(cFn){
+  
+  fnReplica<-file.path(dataPath, paste(cFn, "_replica.csv",sep=""))
+  fnFred   <-file.path(dataPath, paste(cFn, "_fred.csv"   ,sep=""))
+  
+  #first try replica then fred
+  if(file.exists(fnReplica)){
+    C<-read.csv(fnReplica, header=TRUE,stringsAsFactors=FALSE) 
+    print("load replica contact matrix")
+  }else if(file.exists(fnFred)){
+    C<-read.csv(fnFred, header=TRUE,stringsAsFactors=FALSE)
+    print("load fred contact matrix")
+  }else{
+    stop(paste("missing", cFn))
+  } 
+  return(C)
+}
+
+
+
+
+# load policy scenario and dates -----------------------------------------------------
+loadPolicyDates <- function(m){
+  
+  # load policy and dates for this msa
+  P <- checkLoad(policyParm) 
+  P <- P[P$MSA==m,]
+ 
+  # variable names
+  colNm <- colnames(P)
+  colNm <- colNm[!(colNm %in% "Tend")]
+  
+  # policy scenarios and dates
+  policies <- grep("Scenario",colNm,perl=T)
+  dates    <- grep("T",colNm,perl=T)
+  if(length(policies)!=length(dates)) stop("number of policies and number dates not match!")
+  
+  # for each phase
+  np<-length(policies)
+  policyVec<-c()
+  TVec<-c()
+  for (i in 1:np){
+    poli_i <- as.character(P[[colNm[policies[i]]]])
+    date_i <- P[[colNm[dates[i]]]]
+    
+    #policy name tag
+    policyVec<-c(policyVec,paste("_",poli_i,policyCaliEM[min(i,length(policyCaliEM))],sep=""))
+    
+    #start of this policy
+    TVec<-c(TVec,date_i)
+  }
+  
+  # end dates
+  TVec<-c(TVec, P$Tend)
+  if(min(diff(TVec))<=0) stop("policy start dates not increasing")
+  
+  return(list(refPolicy=policyVec, TVec=TVec))
 }
 
 
@@ -196,12 +251,22 @@ tagActiveEmp <- function(sim1) {
 
 # generate string policy tag names from indicator for definition of each contact level -------------------------------------
 policyTagString <- function(policyVec) {
-  #load calibrated parameter file
-  poli <-paste("_W",policyVec[,1],
-               "-S",policyVec[,2],
-               "-N",policyVec[,3],
-               "-E",policyVec[,4],
-               "-M",policyVec[,5],sep="")
+
+  # number of policies
+  n <- dim(policyVec)[2]
+  policyVec <- matrix(as.matrix(policyVec), ncol=n)
+  
+  if (n>length(policyLetterCode)){
+    poliCode <- policyPOILetterCode
+  }else{
+    poliCode <- policyLetterCode
+  }
+  # policy tag
+  poli <- ""
+  for (i in 1:n){
+    tag <- ifelse(i==1, "_", "-")
+    poli<- paste(poli, tag, poliCode[i], policyVec[,i], sep="")
+  }
   return(poli)
 }
 
@@ -336,6 +401,7 @@ calOutcome<-function(simRun){
 #####################################
 #### plot/output functions 
 #####################################
+
 
 # plot SIR -----------------------------------------------------
 plotSIR <- function(sim1,sim2) {
@@ -490,7 +556,7 @@ exportSIR <- function(sim1,place,contact,pcombo) {
 
 
 # plot SIR across senarios -----------------------------------------------------
-packagePlot <- function(sim1,place,contact, sim2) {
+packagePlot <- function(sim1,place,contact,sim2) {
   
   ### produce plots
   fn <- paste(outPath, "figure", paste('SIR_dcm_', place, contact, ver, ".png", sep=""), sep="/")

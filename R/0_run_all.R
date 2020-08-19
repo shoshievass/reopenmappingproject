@@ -32,7 +32,7 @@ source(getCodePath("1_config.R"))
 
 
 ## generate contact matrix
-source(getCodePath("3_gen_contact.R"))
+source(getCodePath("3b_gen_contact.R"))
 
 ## run grid search 
 source(getCodePath("4_grid_search_v2.R"))

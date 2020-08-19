@@ -26,14 +26,28 @@ library(tidyr)
 
 ## user input file names
 
+# demo accounting
+demoAcct  <<- file.path(dataPath, "demo_accounting.csv")
+
 # data for fitting death
 deathData <<- paste(dataPath,"covid_case_death_jh.csv",sep="/")
 
 # SEIR model parameters
 seirParm  <<- paste(parmPath,"params.csv",sep="/")
 
+# user input contact matrix file names start with
+ctMatRaw <<- "contact_poi_msa"
+# ctMatRaw <<- "contact_msa"
+
 # contact matrix file names start with
 ctMatData <<- "C_msa"
+
+# msa specific policy scenarios and dates
+# policyParm <<- file.path(parmPath, "msa_policy_scenarios_dates.csv")
+policyParm <<- file.path(parmPath, "msa_poi_policy_scenarios_dates.csv")
+
+# inputs for grid search calibration
+gsParm <<- file.path(parmPath, "gridsearch.csv")
 
 # calibrated parameter name
 caliParm  <<- "calibrated_parm_msa"
@@ -46,10 +60,10 @@ caliParm  <<- "calibrated_parm_msa"
 ### scenarios/place
 
 ## contact definition for 
-# W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), 
-# and M(mask), although M no impact on contact
-contactPolicy<<-expand.grid(1:4,1:3,1:3,1:2,1:3)
-policyList <<- policyTagString(contactPolicy)
+# W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), M(mask), although M no impact on contact
+policyLetterCode <<- c("W", "S", "N", "E", "M")
+policyPOILetterCode <<- c("W", "S", "N", "B", "R", "P", "F", "E", "M")
+
 
 
 ## reference policies
@@ -59,25 +73,34 @@ refPhase3 <<-"_W4-S3-N1-E2-M2"
 refPolicy   <-c(refPhase1,refPhase2,refPhase3)
 
 
-## combinations
-policyFull <- expand.grid(refPhase1,refPhase2, policyList, stringsAsFactors = FALSE)
+# all combinations of reopening policies including POI policies
+contactPolicyPOI<<-expand.grid(1:4,1:3,1:3,1:2,1:2,1:2,1:2,1:2,1:4)
+poiLevel <<- c("restaurants", "retail", "services", "entertainment")
 
 
-policyCombo<<-rbind(refPolicy,policyFull)
+### key policies considered
+#NP, EO, CR, AS, WFH, 60+
+reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2,1),c(1,1,1,1,1,1,1,2,1),c(4,3,1,2,2,2,2,2,1),c(3,2,1,2,2,2,2,2,1),c(2,3,1,2,2,2,2,2,1),c(4,3,1,2,2,2,2,1,1))
 
-## time period of each phases with different policies
-TTT <<-c(0,15,75,150)
+### all possible combo for reopen policy in the final phase
+# reopenPolicy<<-contactPolicyPOI
 
-## locations
-# NYC, Chicago, Sacramento
-# msa  "5600", "1600", "6920"
-msaList<<-c("5600", "1600", "6920")
 
-msaList<<-c("1600")
+
+## MSAs
+# NYC, Chicago, Sacramento, Houston, Kansas City
+msaList<<-c("5600","1600","6920","3360","3760")
+msaList<<-c("5600")
+#####################################
+# key global variables
+#####################################
 
 
 ## age number of 60
 age60<<-4
+
+## school age (age>=school age is definitely not attending schools)
+ageSchool<<-3
 
 ## naics code for healthcare
 heathNAICS<<-62
@@ -95,8 +118,8 @@ ver <<-"_combo"
 #input (data,contact matrix) version
 datv<<-""
 
-### save results/plots?
-outputSIR<<-0
+### save detailed seir compartment X type X time level results and plots for internal checking?
+outputSIR<<-1
 
 # fix beta as counterfactual, 0 for varying beta, 1 for beta1 and 2 for beta2
 fixBETA  <<-0
