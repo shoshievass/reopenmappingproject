@@ -11,9 +11,10 @@
 rm(list = ls())
 
 ## set up directory
-dir<-dirname(rstudioapi::getSourceEditorContext()$path)
+dir<-dirname(getwd())
+print(dir)
 setwd(dir)
-setwd('..')
+setwd('reopenmappingproject')
 proj<-getwd()
 dataPath <- file.path(proj, "data")
 tempPath <- file.path(proj, "temp")
