@@ -135,9 +135,8 @@ for (m in msaList){
   colnames(TYPE_j)<- paste(colnames(TYPE),"_j",sep="")
   
   # extend types for individual i and j
-  C <- merge(x = C, y = TYPE_i, by = c("age_i", "naics_i"), all = FALSE)
-  C <- merge(x = C, y = TYPE_j, by = c("age_j", "naics_j"), all = FALSE)
-  
+  C <- merge(x = C, y = TYPE_i, by = c("age_i"), all = FALSE)
+  C <- merge(x = C, y = TYPE_j, by = c("age_j"), all = FALSE)
   rm(TYPE, TYPE_i, TYPE_j)
   
   #####################################
@@ -145,8 +144,8 @@ for (m in msaList){
   #####################################
   
   ## full type vector
-  typeVec <-c("age", "naics", "sick", "wfh", "shift")
-  
+  #typeVec <-c("age", "naics", "sick", "wfh", "shift")
+  typeVec <-c("age",  "sick", "wfh", "shift")
   ## adjust number of people and contact by weight for health, WFH, and shift types 
   # we use contact weighted by overlap duration (data is in minute and we translate into hours)
   C$num_people<-C$num_people * (C$sick_w_i * C$shift_w_i * C$wfh_w_i)
@@ -156,7 +155,7 @@ for (m in msaList){
   # define contact between type i and j, and work status for each type i
   Th <-C[,c(paste(typeVec,"i",sep="_"), 
             paste(typeVec,"j",sep="_"),
-            "essential_i","essential_j","contactlvl")]
+            "essential_i","essential_j","contactlvl",'working_i','working_j')]
   
   ## contact definition for 
   # W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), 
@@ -182,7 +181,6 @@ for (m in msaList){
     contactN <- neighborContact(Th, contactList[p,3])
     #elderly  quarantine
     contactE <- elderQuarantine(Th, contactList[p,4]) 
-    
     #contact at each level
     Cp$contactPolicy <- C$contact * (
       (Th$contactlvl=="hh") + 
@@ -191,26 +189,25 @@ for (m in msaList){
       (Th$contactlvl=="work") * (contactW * contactE + (1-contactE) * workContact(Th, 1)) ) # for elderly, only essential
     
     #indicate whether these individuals are actively working or work from home
-    Cp$activeEmp <- activeEmp(Th, contactList[p,1], contactList[p,4]) * (Th$naics_i>0)
+    Cp$activeEmp <- activeEmp(Th, contactList[p,1], contactList[p,4]) * (Th$working_i>0)
     stopifnot(max(Cp$activeEmp)<=1)  
-    
     #####################################
     ### contact matrix for each policy
     #####################################
     
     ## aggregate across contact levels
     Cmat<-Cp %>% 
-      group_by(age_i, naics_i, sick_i, wfh_i, shift_i, 
-               age_j, naics_j, sick_j, wfh_j, shift_j) %>%    # group by type i and j
+      group_by(age_i,  sick_i, wfh_i, shift_i,working_i,
+               age_j,  sick_j, wfh_j, shift_j,working_j) %>%    # group by type i and j
       summarise(n          = mean(num_people), 
                 active_emp = mean(activeEmp), 
                 contact    = sum(contactPolicy))  # number of people, active work status of i and contact
     
     #unique indicator of types
     Cmat$ego  <- as.integer(interaction(
-      Cmat$age_i, Cmat$naics_i, Cmat$sick_i, Cmat$wfh_i, Cmat$shift_i, drop = TRUE, lex.order = TRUE))
+      Cmat$age_i, Cmat$sick_i, Cmat$wfh_i, Cmat$shift_i, drop = TRUE, lex.order = TRUE))
     Cmat$rate <- as.integer(interaction(
-      Cmat$age_j, Cmat$naics_j, Cmat$sick_j, Cmat$wfh_j, Cmat$shift_j, drop = TRUE, lex.order = TRUE))
+      Cmat$age_j,  Cmat$sick_j, Cmat$wfh_j, Cmat$shift_j, drop = TRUE, lex.order = TRUE))
     if(length(unique(Cmat$ego)) != length(unique(Cmat$rate))){
       stop("focal and target types in the contact matrix need to be the same!")
     }
@@ -218,12 +215,12 @@ for (m in msaList){
     #reshape long to wide
     Cmat2 <- Cmat[,!(colnames(Cmat) %in% paste(typeVec,"j",sep="_"))] %>% 
       spread(key=rate, value=contact,sep="", fill = 0) %>% 
-      rename(age=age_i, naics=naics_i, sick=sick_i, wfh=wfh_i, shift=shift_i)
-    
+      rename(age=age_i,  sick=sick_i, wfh=wfh_i, shift=shift_i)
+    print(colnames(Cmat))
     #check dimensions, 
     #there are 8 additional columns for number of people, active work status, 
     #5 types columns and 1 indicator for all posible types
-    if ((dim(Cmat2)[2]-dim(Cmat2)[1])!=(length(typeVec)+3)){
+    if ((dim(Cmat2)[2]-dim(Cmat2)[1])!=(length(typeVec)+2)){
       stop("contact matrix dimensions do not match")
     }
     
@@ -234,7 +231,7 @@ for (m in msaList){
 
     #collapse to lower dimension contact matrix
     Cmat1 <- Cmat %>% 
-      group_by(ego, age_i, naics_i, sick_i, wfh_i, shift_i, age_j) %>%    # group by target type 
+      group_by(ego, age_i,  sick_i, wfh_i, shift_i, age_j) %>%    # group by target type 
       summarise(n=mean(n), rate=sum(contact)) %>% # total contact across type j
       group_by(age_i, age_j) %>%                  # group by focal type
       summarise(Value = weighted.mean(rate, n)) %>% #weighted average contact across type i
