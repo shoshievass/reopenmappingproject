@@ -52,7 +52,7 @@ runSir <- function(place, policy, par, simRef){
         
       # generate csv outputs
       if (outputSIR==1) exportSIR(sim0,place,contact,pcombo)
-      packagePlot(sim0,place,pcombo,simRef)
+      #packagePlot(sim0,place,pcombo,simRef)
     }
   }
   

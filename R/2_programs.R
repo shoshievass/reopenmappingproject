@@ -146,13 +146,13 @@ loadData <- function(place,contact) {
 
   ## define some global variables of types of agents
   # types
-  types<<- cbind(CData[,c("ego","naics","age","sick","wfh","shift","active_emp","n")])
+  types<<- cbind(CData[,c("ego","age","sick","wfh","shift","active_emp","n",'essential','working')])
   
   #age X sick (age*10 + sick)
   ageSickVec <<-match(CData$age*10 + CData$sick, typeAgeSick)
 
   #healthcare worker
-  healthVec <<-CData$naics==heathNAICS
+  healthVec <<-CData$essential==1
   
   #contact matrix
   Cmat <- as.matrix(CData[,grepl("rate", colnames(CData))])
@@ -457,7 +457,7 @@ calOutcome<-function(simRun){
   
   ## compute total employment loss in days
   t<-max(TTT)
-  empLoss <- sum(types$n[types$naics>0])*t - sum(active[2:(t+1),])
+  empLoss <- sum(types$n[types$working>0])*t - sum(active[2:(t+1),])
   print(paste("Employment loss (1000days):", 
               round(empLoss/1e3)))  
   
@@ -675,7 +675,7 @@ packagePlot <- function(sim1,place,contact, sim2) {
   par(mfrow=c(2,2))
   plotSIR(fn1,sim1,sim2)
   plotSIRHealth(fn2,sim1,sim2)
-  plotIbyNaics(fn3,sim1)
+ # plotIbyNaics(fn3,sim1)
 }
 
 

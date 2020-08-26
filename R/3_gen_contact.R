@@ -145,7 +145,7 @@ for (m in msaList){
   
   ## full type vector
   #typeVec <-c("age", "naics", "sick", "wfh", "shift")
-  typeVec <-c("age",  "sick", "wfh", "shift")
+  typeVec <-c("age",  "sick", "wfh", "shift",'working')
   ## adjust number of people and contact by weight for health, WFH, and shift types 
   # we use contact weighted by overlap duration (data is in minute and we translate into hours)
   C$num_people<-C$num_people * (C$sick_w_i * C$shift_w_i * C$wfh_w_i)
@@ -155,7 +155,7 @@ for (m in msaList){
   # define contact between type i and j, and work status for each type i
   Th <-C[,c(paste(typeVec,"i",sep="_"), 
             paste(typeVec,"j",sep="_"),
-            "essential_i","essential_j","contactlvl",'working_i','working_j')]
+            "essential_i","essential_j","contactlvl")]
   
   ## contact definition for 
   # W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), 
@@ -197,30 +197,28 @@ for (m in msaList){
     
     ## aggregate across contact levels
     Cmat<-Cp %>% 
-      group_by(age_i,  sick_i, wfh_i, shift_i,working_i,
-               age_j,  sick_j, wfh_j, shift_j,working_j) %>%    # group by type i and j
+      group_by(age_i,  sick_i, wfh_i, shift_i,working_i,essential_i,
+               age_j,  sick_j, wfh_j, shift_j,working_j,essential_j) %>%    # group by type i and j
       summarise(n          = mean(num_people), 
                 active_emp = mean(activeEmp), 
                 contact    = sum(contactPolicy))  # number of people, active work status of i and contact
     
     #unique indicator of types
     Cmat$ego  <- as.integer(interaction(
-      Cmat$age_i, Cmat$sick_i, Cmat$wfh_i, Cmat$shift_i, drop = TRUE, lex.order = TRUE))
+      Cmat$age_i, Cmat$sick_i, Cmat$wfh_i, Cmat$shift_i,Cmat$working_i,Cmat$essential_i, drop = TRUE, lex.order = TRUE))
     Cmat$rate <- as.integer(interaction(
-      Cmat$age_j,  Cmat$sick_j, Cmat$wfh_j, Cmat$shift_j, drop = TRUE, lex.order = TRUE))
+      Cmat$age_j,  Cmat$sick_j, Cmat$wfh_j, Cmat$shift_j,Cmat$working_j,Cmat$essential_j, drop = TRUE, lex.order = TRUE))
     if(length(unique(Cmat$ego)) != length(unique(Cmat$rate))){
       stop("focal and target types in the contact matrix need to be the same!")
     }
-
     #reshape long to wide
-    Cmat2 <- Cmat[,!(colnames(Cmat) %in% paste(typeVec,"j",sep="_"))] %>% 
+    Cmat2 <- Cmat[,!(colnames(Cmat) %in% paste(c('essential',typeVec),"j",sep="_"))] %>% 
       spread(key=rate, value=contact,sep="", fill = 0) %>% 
-      rename(age=age_i,  sick=sick_i, wfh=wfh_i, shift=shift_i)
-    print(colnames(Cmat))
+      rename(age=age_i,  sick=sick_i, wfh=wfh_i, shift=shift_i,working=working_i,essential=essential_i)
     #check dimensions, 
     #there are 8 additional columns for number of people, active work status, 
-    #5 types columns and 1 indicator for all posible types
-    if ((dim(Cmat2)[2]-dim(Cmat2)[1])!=(length(typeVec)+2)){
+    # 5 types columns and 1 indicator for all posible types
+    if ((dim(Cmat2)[2]-dim(Cmat2)[1])!=(length(typeVec)+4)){
       stop("contact matrix dimensions do not match")
     }
     
