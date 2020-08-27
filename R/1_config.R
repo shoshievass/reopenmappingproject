@@ -93,6 +93,7 @@ poiLevel <<- c("restaurants", "retail", "services", "entertainment")
 ### key policies considered
 #NP, EO, CR, AS, WFH, 60+
 reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2,1),c(1,1,1,1,1,1,1,2,1),c(4,3,1,2,2,2,2,2,1),c(3,2,1,2,2,2,2,2,1),c(2,3,1,2,2,2,2,2,1),c(4,3,1,2,2,2,2,1,1))
+reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2,1),c(2,3,1,2,2,2,2,2,1))
 
 ### all possible combo for reopen policy in the final phase
 # reopenPolicy<<-contactPolicyPOI

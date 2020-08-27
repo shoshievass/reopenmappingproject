@@ -11,7 +11,11 @@ Demo <- Demo[Demo$region==P$Division,]
 
 # key outputs
 t<-max(TTT)
+
+######## sim_i is generated from running 5_seir.R ########
+simRun <- sim_i
 coln <- colnames(simRun)
+
 
 ### cumulative death rate
 deathRate       <- simRun[,pickState("D",coln)]
@@ -23,29 +27,31 @@ s<-simRun[,pickState("S",coln)]
 for (i in c("E","Ia","Ins","Rqd","Rnq")){
   s<-s+simRun[,pickState(i,coln)]
 }
-## consider wether these individuals are actively working
+## consider whether these individuals are actively working
 active<-s * simRun[,pickState("active",coln)]
 
 ## compute total employment loss in days
 types$empLoss <- t*(types$naics>0) - colSums(active[2:(t+1),])/types$n
 
 
-## first average across shift types
+## first average across types
 types_temp <- types %>% 
-  group_by(age, naics, work_poi, wfh, active_emp) %>% 
+  group_by(age, naics, work_poi, sick, wfh, active_emp) %>% 
   summarise(deathRate = mean(deathRate), 
             empLoss   = mean(empLoss),
             n = sum(n)) 
 
-######## !!!! ########### not all types exit in ACS data, expeically poi 2 and 3 which span multiple naics, I should merge those naics
+
+## merge type specific outcome with demo distribution
+## not all types exit in ACS data, 
 Demo1 <- merge(x = Demo, y = types_temp)
 
 stopifnot(sum(is.na(Demo1))==0)
 Demo2 <- Demo1 %>% 
   group_by(race, income) %>% 
   summarise(totalW = sum(pr_type_ineq), 
-            deathRate = mean(pr_type_ineq * deathRate),
-            empLoss   = mean(pr_type_ineq * empLoss)/mean(pr_type_ineq * active_emp),
+            deathRate = sum(pr_type_ineq * deathRate)/sum(pr_type_ineq),
+            empLoss   = sum(pr_type_ineq * empLoss)/sum(pr_type_ineq * active_emp),
             N = sum(N))
 
 Demo2$pr_race_income <- Demo2$N*100/sum(Demo2$N)
