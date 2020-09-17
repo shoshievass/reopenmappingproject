@@ -106,8 +106,8 @@ genRef4Area<<-0
 
 ## MSAs
 # NYC, Chicago, Sacramento, Houston, Kansas City
-msaList<<-c("5600","1600","6920","3360","3760")
-msaList<<-c("5600")
+msaList<<-c("5600","1600","6920","3760")
+msaList<<-c("3760")
 #####################################
 # key global variables
 #####################################

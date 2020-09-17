@@ -163,21 +163,17 @@ for (m in msaList){
   
   # extend types for individual i and j
   if (hasPOI){
+    ## drop NAICS classification if we have work_poi info
+    C$naics_i[C$work_poi_i>0]<-99
+    C$naics_j[C$work_poi_j>0]<-99
     C <- merge(x = C, y = TYPE_i, by = c("age_i", "naics_i", "work_poi_i"), all = FALSE)
     C <- merge(x = C, y = TYPE_j, by = c("age_j", "naics_j", "work_poi_j"), all = FALSE)
   }else{
     C <- merge(x = C, y = TYPE_i, by = c("age_i", "naics_i"), all = FALSE)
     C <- merge(x = C, y = TYPE_j, by = c("age_j", "naics_j"), all = FALSE)
   }
-    
-  
   rm(TYPE, TYPE_i, TYPE_j)
-  
-  
-  #####################################
-  ### policy definition
-  #####################################
-  
+
   ## full type vector
   typeVec <-c("age", "naics", "work_poi", "sick", "wfh", "shift")
   
@@ -192,6 +188,37 @@ for (m in msaList){
             paste(typeVec,"j",sep="_"),
             "essential_i","essential_j","contactlvl")]
   
+  #####################################################################
+  ### export aggregate demogrpahics (not for contact matrix and SEIR)
+  #####################################################################  
+  
+  Cdemo <- C[,c(paste(typeVec,"i",sep="_"),"essential_i","num_people")] %>% distinct() %>%
+    group_by(age_i, naics_i, sick_i, wfh_i, essential_i) %>% 
+    summarise(num_people=sum(num_people)) %>%
+    rename(age = age_i, 
+           naics = naics_i, 
+           sick = sick_i,
+           wfh = wfh_i,
+           essential = essential_i) 
+  
+  # demo graphic accounting inputs
+  Demo <- checkLoad(demoAcct) 
+  Demo <- Demo[Demo$region==unique(C$region_i),] %>%
+    group_by(age, naics, sick, wfh, race, income) %>%
+    summarise(N = sum(N)) %>%
+    group_by(age, naics, sick, wfh) %>%
+    mutate(prob_age_income = N/sum(N))
+  
+  Cdemo <- merge(Cdemo, Demo, by=c("age","naics","sick","wfh"), all = FALSE) %>%
+    mutate(num_people = num_people * prob_age_income)
+  
+  checkWrite(file.path(outPath, 
+                       paste("Demo_msa", m, ".csv", sep="")), 
+             Cdemo, "aggregate demographics")
+  
+  #####################################
+  ### policy definition
+  #####################################
   
   ## contact definition for 
   # W(work), S(school), N(neighbor), B(bar/restuarant), R(retail), P(personal services), F(entertainment)
@@ -205,11 +232,7 @@ for (m in msaList){
   nPoli <- dim(contactList)[2]
   
   for (p in 1:dim(contactList)[1]){
-    
-    # wfh but POI open.....
-    #p = 1150
-    
-    
+
     #policy tag
     policy <- gsub("_", "", policyTagString(contactList[p,]))
     Cp <- C
