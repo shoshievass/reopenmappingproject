@@ -46,7 +46,7 @@ runSir <- function(place, policy, par, simRef){
     check<-rowSums(sim0[,c("S5","E5","Ia5","Ins5","Ihc5","Rq5","Rnq5","Rqd5","D5")])
     stopifnot(abs(min(check)-max(check))<0.1)
     
-    # state to plot
+    # output compartments to plot
     if (j==np){
       state2plot<-c("Deaths","Cases","Employment Loss")
       what2plot<-list(D=c("D"),C=c("Ihc","Rq","Rqd","D"),Emp=c("Ihc","Rq","D"))
@@ -65,12 +65,10 @@ runSir <- function(place, policy, par, simRef){
 # compare SIR for two MSAs -----------------------------------------------------
 plotSIR2MSA <- function(fn, var, var_ref, small, legendMSA) {
   
-
-  
   # state to plot
-  state2plot<-c("Deaths","Cases","Employment Loss")
   name2plot<-c("Deaths","Cases","EmpLoss")
   
+  # different y axis range, depending on MSAs and run version
   colvec<-c(6,7,1)
   if (Generic==2){
     yub<-c(0.9,70,40)
@@ -87,7 +85,7 @@ plotSIR2MSA <- function(fn, var, var_ref, small, legendMSA) {
     if (fn!="")  fn1 <- file.path(outPath, "figure", paste(name2plot[i], fn, sep=""))
     if (fn!="")  png(fn1)
     
-    
+    ### plot two regions
     plot(0:max(TTT),var[i,]
          ,type="l",ylab="Percent of population",xlab="",ylim=c(0,yub[i]),lwd=2,col=mycol[colvec[i]])
     lines(0:max(TTT),var_ref[i,],
@@ -120,7 +118,16 @@ P <- checkLoad(policyParm)
 np <- length(grep("Scenario",colnames(P),perl=T))
 
 
-# foreach MSA
+# we need to run all 4 MSAs together, in the following order
+msaList<<-c("5600","1600","6920","3760")
+
+#NP throughout
+nopolicy <- "_W4-S3-N3-B2-R2-P2-F2-E2-M1"
+policy<-rep(nopolicy, 4)
+
+
+
+#### foreach MSA
 m_num<-1
 for (m in msaList){
   # load calibrated parameters for this location
@@ -137,33 +144,23 @@ for (m in msaList){
   
   # initial condition
   initNumIperType<<-par$I0
-  
-  #policy combo
-  policyCombo<<-genPolicy(reopenPolicy, msaPD$refPolicy)
-  
-  # run second policy (NP)
 
-  # for each policy combo
-  policy <- as.vector(policyCombo[2,])
-  policy[1:3]<-policy[4]
-  
-  
-  
-  ## sir across phases
+  # sir across phases, output time series of compartments that we want to plot
   var<-runSir(m, policy, par, NA)
     
-  #the first is reference MSA
+  # reference MSA
   if (m_num %% 2 ==1){
     var_ref<-var
   }
-    
+  
+  # compare results for two MSAs
   if (m_num %% 2 ==0){
     if (m_num<3){
       legendMSA <- c("Chicago", "NYC")
     }else{
       legendMSA <- c("Kansas City", "Sacramento")
-      
     }
+    
     fnEnd <- paste('_', m, '_', msaList[m_num-1], verTag, ".png", sep="")
     plotSIR2MSA(fnEnd, var, var_ref, floor(m_num/2)-1,legendMSA)
   }
