@@ -95,9 +95,9 @@ poiLevel <<- c("restaurants", "retail", "services", "entertainment")
 reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2,1),c(1,1,1,1,1,1,1,2,1),c(4,3,1,2,2,2,2,2,1),c(3,2,1,2,2,2,2,2,1),c(2,3,1,2,2,2,2,2,1),c(4,3,1,2,2,2,2,1,1))
 reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2,1),c(2,3,1,2,2,2,2,2,1))
 
+
 ### all possible combo for reopen policy in the final phase
 # reopenPolicy<<-contactPolicyPOI
-
 
 # generate results for multiple reference policies, 
 # this is for area plot
@@ -107,7 +107,8 @@ genRef4Area<<-0
 ## MSAs
 # NYC, Chicago, Sacramento, Houston, Kansas City
 msaList<<-c("5600","1600","6920","3760")
-msaList<<-c("3760")
+# msaList<<-c("3760")
+
 #####################################
 # key global variables
 #####################################
@@ -129,11 +130,20 @@ TNAUGHT <<- as.Date(unique("3/5/2020"), "%m/%d/%Y")
 # input/output versions
 #####################################
 
-#output version
+# output version
 verTag <<-"_combo"
 
-### save detailed seir compartment X type X time level results and plots for internal checking?
+# save detailed seir compartment X type X time level results and plots for internal checking?
 outputSIR<<-1
+
+# estimated or generic beta
+# 0: use MSA specific estimated parameter
+# 1: use MSA specific beta and generic initial condition
+# 2: use generic parameters
+Generic<<-2
+if (Generic>0){
+  verTag <<-paste(verTag,'_par',Generic,sep="")
+}
 
 
 #####################################

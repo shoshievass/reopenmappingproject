@@ -160,20 +160,28 @@ for (m in msaList){
   TYPE_j<-TYPE
   colnames(TYPE_i) <- paste(colnames(TYPE),"_i",sep="")
   colnames(TYPE_j) <- paste(colnames(TYPE),"_j",sep="")
+
   
   # extend types for individual i and j
   if (hasPOI){
-    ## drop NAICS classification if we have work_poi info
+    ## consolidate NAICS classification if we have work_poi info, this is just for merging types, revert back to original type space
+    C$naics_raw_i <-C$naics_i
+    C$naics_raw_j <-C$naics_j
     C$naics_i[C$work_poi_i>0]<-99
     C$naics_j[C$work_poi_j>0]<-99
+    
     C <- merge(x = C, y = TYPE_i, by = c("age_i", "naics_i", "work_poi_i"), all = FALSE)
     C <- merge(x = C, y = TYPE_j, by = c("age_j", "naics_j", "work_poi_j"), all = FALSE)
+    
+    C$naics_i<-C$naics_raw_i
+    C$naics_j<-C$naics_raw_j
   }else{
     C <- merge(x = C, y = TYPE_i, by = c("age_i", "naics_i"), all = FALSE)
     C <- merge(x = C, y = TYPE_j, by = c("age_j", "naics_j"), all = FALSE)
   }
   rm(TYPE, TYPE_i, TYPE_j)
-
+  
+  
   ## full type vector
   typeVec <-c("age", "naics", "work_poi", "sick", "wfh", "shift")
   
@@ -190,32 +198,29 @@ for (m in msaList){
   
   #####################################################################
   ### export aggregate demogrpahics (not for contact matrix and SEIR)
+  #   this is based on demo accounting with race and income also
   #####################################################################  
   
-  Cdemo <- C[,c(paste(typeVec,"i",sep="_"),"essential_i","num_people")] %>% distinct() %>%
-    group_by(age_i, naics_i, sick_i, wfh_i, essential_i) %>% 
-    summarise(num_people=sum(num_people)) %>%
-    rename(age = age_i, 
-           naics = naics_i, 
-           sick = sick_i,
-           wfh = wfh_i,
-           essential = essential_i) 
-  
-  # demo graphic accounting inputs
-  Demo <- checkLoad(demoAcct) 
-  Demo <- Demo[Demo$region==unique(C$region_i),] %>%
-    group_by(age, naics, sick, wfh, race, income) %>%
-    summarise(N = sum(N)) %>%
-    group_by(age, naics, sick, wfh) %>%
-    mutate(prob_age_income = N/sum(N))
-  
-  Cdemo <- merge(Cdemo, Demo, by=c("age","naics","sick","wfh"), all = FALSE) %>%
-    mutate(num_people = num_people * prob_age_income)
-  
-  checkWrite(file.path(outPath, 
-                       paste("Demo_msa", m, ".csv", sep="")), 
-             Cdemo, "aggregate demographics")
-  
+  # Cdemo <- C[,c(paste(typeVec,"i",sep="_"),"essential_i","num_people")] %>% distinct() %>%
+  #   group_by(age_i, naics_i, sick_i, wfh_i, essential_i) %>% 
+  #   summarise(num_people=sum(num_people)) %>%
+  #   rename(age = age_i, naics = naics_i, sick = sick_i, wfh = wfh_i,essential = essential_i) 
+  # 
+  # # demo graphic accounting inputs
+  # Demo <- checkLoad(demoAcct) 
+  # Demo <- Demo[Demo$region==unique(C$region_i),] %>%
+  #   group_by(age, naics, sick, wfh, race, income) %>%
+  #   summarise(N = sum(N)) %>%
+  #   group_by(age, naics, sick, wfh) %>%
+  #   mutate(prob_age_income = N/sum(N))
+  # 
+  # Cdemo <- merge(Cdemo, Demo, by=c("age","naics","sick","wfh"), all = FALSE) %>%
+  #   mutate(num_people = num_people * prob_age_income)
+  # 
+  # checkWrite(file.path(outPath, 
+  #                      paste("Demo_msa", m, ".csv", sep="")), 
+  #            Cdemo, "aggregate demographics")
+  # 
   #####################################
   ### policy definition
   #####################################

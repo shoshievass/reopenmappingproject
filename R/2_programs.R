@@ -115,17 +115,41 @@ initialCondition <- function(fromT,sim0) {
 
 # calibrated parameters  -----------------------------------------------------
 # load previously calibrated parameters
-calibratedPar <- function(place) {
+calibratedPar <- function(place, generic=0) {
   #load calibrated parameter file
-  fn <- file.path(calibratedParPath, 
+  
+  # generic:
+  # 0: use MSA specific estimated parameter
+  # 1: use MSA specific beta and generic initial condition
+  # 2: use generic parameters
+  
+  if (generic<=1){
+    fn <- file.path(calibratedParPath, 
                   paste(caliParm, place, ".csv", sep=""))
-  pData <-checkLoad(fn)
+    pData <-checkLoad(fn)
+    
+    ## extract parameters
+    I0<-as.vector(min(pData$I0))
+    beta1<-as.vector(min(pData$beta1))
+    beta2<-as.vector(min(pData$beta2))
+  }
+
   
-  ## extract parameters
-  I0<-as.vector(min(pData$I0))
-  beta1<-as.vector(min(pData$beta1))
-  beta2<-as.vector(min(pData$beta2))
-  
+  if (generic>=1){
+    fn <- file.path(calibratedParPath, 
+                    paste(caliParm, "0000", ".csv", sep=""))    
+    pData <-checkLoad(fn)
+    
+    # generic initial condition
+    I0<-as.vector(min(pData$I0))
+    
+    if (generic==2){
+      #generic beta
+      beta1<-as.vector(min(pData$beta1))
+      beta2<-as.vector(min(pData$beta2))      
+    }
+
+  }
   return(list(I0=I0,beta1=beta1,beta2=beta2))
 }
 
@@ -496,7 +520,7 @@ plotSIR <- function(fn, sim1,sim2) {
   
   # secondary outputs
   if (min(is.na(sim2))==0){
-    plotSeveralLines(what2plot,colvec,sim2,2)
+    plotSeveralLines(what2plot[1],colvec[1],sim2,2)
   }
   # indicate start of policy intervention and reopen
   timingVerticalLine("gray")

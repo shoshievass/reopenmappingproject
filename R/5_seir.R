@@ -81,10 +81,10 @@ df<-data.frame(matrix(ncol = np+8+length(ageG)*2, nrow = 0,
 dfRow<-0
 policyVecName0<-rep("",np)
 
-# foreach place
+# foreach MSA
 for (m in msaList){
   # load calibrated parameters for this location
-  par<-calibratedPar(m)
+  par<-calibratedPar(m, Generic)
 
   ### msa policy and date
   msaPD <- loadPolicyDates(m)
