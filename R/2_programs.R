@@ -158,6 +158,24 @@ calibratedPar <- function(place, generic=0) {
 
 # load contact matrix data -----------------------------------------------------
 loadData <- function(place,contact) {
+
+  # load contact data
+  CData <-loadContactData(place,contact)
+
+  # type composition and contact matrix
+  types <<-CData$types
+  Cmat <-CData$Cmat
+  
+  # some global variables for types
+  globalTypeVectors(types)
+
+
+  return(Cmat=Cmat)
+}
+
+
+# load contact matrix data -----------------------------------------------------
+loadContactData <- function(place,contact) {
   
   #remove mask assumption from contact code
   contact <- substr(contact, 1, gregexpr("-M",contact)[[1]][1]-1)
@@ -166,23 +184,26 @@ loadData <- function(place,contact) {
   fn <- file.path(contactMatrixPath, 
                   paste(ctMatData, place, contact, ".csv", sep=""))
   CData <-checkLoad(fn)
-
   
   ## define some global variables of types of agents
-  types<<- cbind(CData[,c("ego","naics","age","sick","wfh","shift","work_poi","active_emp","n")])
-  
-  #age X sick (age*10 + sick)
-  ageSickVec <<-match(CData$age*10 + CData$sick, typeAgeSick)
-
-  #healthcare worker
-  healthVec <<-(CData$naics==heathNAICS) * (CData$work_poi==0)
+  types<- cbind(CData[,c("ego","naics","age","sick","wfh","shift","work_poi","active_emp","n")])
   
   #contact matrix
   Cmat <- as.matrix(CData[,grepl("rate", colnames(CData))])
   
-  return(Cmat=Cmat)
+  return(list(types=types, Cmat=Cmat))
 }
 
+
+# type vectors global variables -----------------------------------------------------
+globalTypeVectors <- function(types) {
+  
+  #age X sick (age*10 + sick)
+  ageSickVec <<-match(types$age*10 + types$sick, typeAgeSick)
+  
+  #healthcare worker
+  healthVec <<-(types$naics==heathNAICS) * (types$work_poi==0)
+}
 
 # check if file exist and load  -----------------------------------------------------
 checkLoad <- function(fn) {

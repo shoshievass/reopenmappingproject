@@ -8,8 +8,9 @@
 
 
 
+
 ### wrapper function for running SIR under one policy combination 
-runSir <- function(place, policy, par, simRef){
+runSir <- function(placeCnt, placePop, policy, par, simRef){
   #number of phases
   np<-length(policy)
   
@@ -19,7 +20,31 @@ runSir <- function(place, policy, par, simRef){
   for (j in 1:np){
     contact <- as.vector(policy[[j]])
     # load contact matrix from synthetic population
-    Cmat<<-loadData(place, contact)
+    
+    #### superimpose composition
+    ## load composition
+    CDataPop <-loadContactData(placePop,contact)
+    
+    ## load contact
+    CDataCnt <-loadContactData(placeCnt,contact)
+
+    types<-CDataCnt$types[,(colnames(CDataCnt$types) %in% c("n"))==FALSE]
+    
+    ## merge, keep all types in the contact matrix
+    types <- merge(types, CDataPop$types, by=c("naics","age","sick","wfh","shift","work_poi","active_emp"),all.x = TRUE) 
+   
+    ## revert to original order, keep only merged types
+    types <- types[order(types$ego.x), ]
+    valid_types <- is.na(types$n)==FALSE
+    types <- types[valid_types,]
+    
+    #redefine ego indicators
+    types$ego <- 1:nrow(types)
+    types<<-types
+    
+    globalTypeVectors(types)
+    Cmat<<-CDataCnt$Cmat[valid_types,valid_types]
+    stopifnot(mean(dim(Cmat))==nrow(types))
     
     # load default parameters and set transmission rate
     vpar<-vparameters0
@@ -63,13 +88,14 @@ runSir <- function(place, policy, par, simRef){
 
 
 # compare SIR for two MSAs -----------------------------------------------------
-plotSIR2MSA <- function(fn, var, var_ref, small, legendMSA) {
+plotSIR2MSA <- function(fn, var, small, legendMSA) {
   
   # state to plot
   name2plot<-c("Deaths","Cases","EmpLoss")
   
   # different y axis range, depending on MSAs and run version
-  colvec<-c(6,7,1)
+  colvec <-c(6,7,1)
+  colvec2<-c(4,5,2)
   if (Generic==2){
     yub<-c(0.9,70,40)
   }else{
@@ -84,18 +110,24 @@ plotSIR2MSA <- function(fn, var, var_ref, small, legendMSA) {
     
     if (fn!="")  fn1 <- file.path(outPath, "figure", paste(name2plot[i], fn, sep=""))
     if (fn!="")  png(fn1)
-    
+    color  <- mycol[colvec[i]]
+    color2 <- mycol[colvec2[i]]
+    idx <- (i-1)*3
     ### plot two regions
     plot(0:max(TTT),var[i,]
-         ,type="l",ylab="Percent of population",xlab="",ylim=c(0,yub[i]),lwd=2,col=mycol[colvec[i]])
-    lines(0:max(TTT),var_ref[i,],
+         ,type="l",ylab="Percent of population",xlab="",ylim=c(0,yub[i]),lwd=2,col=color)
+    lines(0:max(TTT),var[3+i,],
           type="l",lty=2,lwd=2,col=mycol[colvec[i]])
+    lines(0:max(TTT),var[6+i,],
+          type="l",lty=5,lwd=2,col=mycol[colvec2[i]])
+    lines(0:max(TTT),var[9+i,],
+          type="l",lty=1,lwd=2,col=mycol[colvec2[i]])
     
     legend("topleft",
            legend=legendMSA,
-           col=c(mycol[colvec[i]],mycol[colvec[i]]),
-           lty=1:2, 
-           horiz=F,lwd=1.3,bty="n",cex=1.3)
+           col=c(color,color,color2,color2),
+           lty=c(1,2,5,1), 
+           horiz=F,lwd=1.3,bty="n",cex=1)
     
     if (fn!=""){
       dev.off()
@@ -119,7 +151,9 @@ np <- length(grep("Scenario",colnames(P),perl=T))
 
 
 # we need to run all 4 MSAs together, in the following order
-msaList<<-c("5600","1600","6920","3760")
+msaListCntct<<-c("5600","1600","5600","1600","6920","3760","6920","3760")
+msaListCmpst<<-c("5600","5600","1600","1600","6920","6920","3760","3760")
+
 
 #NP throughout
 nopolicy <- "_W4-S3-N3-B2-R2-P2-F2-E2-M1"
@@ -129,7 +163,8 @@ policy<-rep(nopolicy, 4)
 
 #### foreach MSA
 m_num<-1
-for (m in msaList){
+var_agg<-c()
+for (m in msaListCntct){
   # load calibrated parameters for this location
   par<-calibratedPar(m, Generic)
   
@@ -146,27 +181,36 @@ for (m in msaList){
   initNumIperType<<-par$I0
 
   # sir across phases, output time series of compartments that we want to plot
-  var<-runSir(m, policy, par, NA)
+  var<-runSir(m, msaListCmpst[m_num], policy, par, NA)
     
-  # reference MSA
-  if (m_num %% 2 ==1){
-    var_ref<-var
-  }
+  # consolidate outputs
+  var_agg<-rbind(var_agg, var)
+
   
   # compare results for two MSAs
-  if (m_num %% 2 ==0){
-    if (m_num<3){
-      legendMSA <- c("Chicago", "NYC")
+  if (m_num %% 4 ==0){
+    if (m_num<=4){
+      legendMSA <- c("NYC Contact - NYC Population", "Chicago Contact - NYC Population",
+                     "NYC Contact - Chicago Population", "Chicago Contact - Chicago Population")
+      small<-0
     }else{
-      legendMSA <- c("Kansas City", "Sacramento")
+      legendMSA <- c("Sacramento Contact - Sacramento Population", "Kansas City Contact - Sacramento Population",
+                     "Sacramento Contact - Kansas City Population", "Kansas City Contact - Kansas City Population")
+      small<-1
     }
     
-    fnEnd <- paste('_', m, '_', msaList[m_num-1], verTag, ".png", sep="")
-    plotSIR2MSA(fnEnd, var, var_ref, floor(m_num/2)-1,legendMSA)
+    fnEnd <- paste('_', m, '_', msaListCntct[m_num-1], verTag, ".png", sep="")
+    plotSIR2MSA(fnEnd, var_agg, small,legendMSA)
   }
+
+  # reset aggregation
+  if (m_num %% 4 ==0){
+    var_agg<-c()
+  }  
   m_num<-m_num+1
+  
 }
-rm(Cmat, par)
+# rm(Cmat, par)
 
 
 

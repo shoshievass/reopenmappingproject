@@ -140,7 +140,7 @@ outputSIR<<-1
 # 0: use MSA specific estimated parameter
 # 1: use MSA specific beta and generic initial condition
 # 2: use generic parameters
-Generic<<-2
+Generic<<-1
 if (Generic>0){
   verTag <<-paste(verTag,'_par',Generic,sep="")
 }
