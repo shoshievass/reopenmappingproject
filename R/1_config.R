@@ -63,7 +63,8 @@ ctMatData <<- "C_msa"
 policyParm <<- file.path(parmPath, "msa_poi_policy_scenarios_dates.csv")
 
 # inputs for grid search calibration
-gsParm <<- file.path(parmPath, "gridsearch.csv")
+# gsParm <<- file.path(parmPath, "gridsearch.csv")
+gsParm <<- file.path(parmPath, "gridsearch_v2.csv")
 
 # calibrated parameter name
 caliParm  <<- "calibrated_parm_msa"
@@ -115,7 +116,7 @@ msaList<<-c("5600","1600","6920","3760")
 
 
 ## age number of 60
-age60<<-4
+age60<<-6
 
 ## school age (age>=school age is definitely not attending schools)
 ageSchool<<-3
@@ -181,6 +182,8 @@ infectDuration<<-psi * (1/mean(TAU)) + (1-psi) * (1/mean(TAU) + 1/gamma)
 # initial condition: number of people in I^A per type
 initNumIperType<<-1
 
+# mortality scaler
+mortScale<<-1
 
 #########################################################
 ### global variables for plots for internal testing

@@ -217,7 +217,7 @@ for (m in msaList){
     
     #reshape long to wide
     Cmat2 <- Cmat[,!(colnames(Cmat) %in% paste(typeVec,"j",sep="_"))] %>% 
-      spread(key=rate, value=contact,sep="", fill = 0) %>% 
+      spread(key=rate, value=contact, sep="", fill = 0) %>% 
       rename(age=age_i, naics=naics_i, sick=sick_i, wfh=wfh_i, shift=shift_i)
     
     #check dimensions, 
