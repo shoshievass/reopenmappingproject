@@ -167,6 +167,8 @@ vparameters0 <<- c(gamma=gamma,betaH=betaH,eta=eta,psi=psi)
 #type specific parameters
 EPSILON<<-PAR$epsilon
 TAU    <<-PAR$tau
+# rate at which Ia flow into hospital
+HOSPITAL <<-PAR$hospital * TAU * psi
 
 #input mortality conditional on infected, transform into transition rate conditional on symptomatic
 mort     <-PAR$mort
@@ -182,8 +184,6 @@ infectDuration<<-psi * (1/mean(TAU)) + (1-psi) * (1/mean(TAU) + 1/gamma)
 # initial condition: number of people in I^A per type
 initNumIperType<<-1
 
-# mortality scaler
-mortScale<<-1
 
 #########################################################
 ### global variables for plots for internal testing

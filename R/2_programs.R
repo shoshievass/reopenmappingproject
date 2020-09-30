@@ -739,7 +739,7 @@ gen_col <- function() {
   mycol <<- c(t_col("red",     perc = 0),
               t_col("orange",  perc = 0),
               t_col("yellow2", perc = 0),
-              t_col("green",   perc = 0),
+              t_col("brown",   perc = 0),
               t_col("dimgray", perc = 0),
               t_col("blue",    perc = 0),
               t_col("purple",  perc = 0))
