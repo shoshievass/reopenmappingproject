@@ -161,24 +161,20 @@ for (m in msaList){
   colnames(TYPE_i) <- paste(colnames(TYPE),"_i",sep="")
   colnames(TYPE_j) <- paste(colnames(TYPE),"_j",sep="")
 
+  # population
+  check<-C %>% group_by(age_i, naics_i, work_poi_i) %>% summarise(n=mean(num_people))
+  pop1<-sum(check$n)
   
   # extend types for individual i and j
   if (hasPOI){
-    ## consolidate NAICS classification if we have work_poi info, this is just for merging types, revert back to original type space
-    C$naics_raw_i <-C$naics_i
-    C$naics_raw_j <-C$naics_j
-    C$naics_i[C$work_poi_i>0]<-99
-    C$naics_j[C$work_poi_j>0]<-99
-    
     C <- merge(x = C, y = TYPE_i, by = c("age_i", "naics_i", "work_poi_i"), all = FALSE)
     C <- merge(x = C, y = TYPE_j, by = c("age_j", "naics_j", "work_poi_j"), all = FALSE)
-    
-    C$naics_i<-C$naics_raw_i
-    C$naics_j<-C$naics_raw_j
   }else{
     C <- merge(x = C, y = TYPE_i, by = c("age_i", "naics_i"), all = FALSE)
     C <- merge(x = C, y = TYPE_j, by = c("age_j", "naics_j"), all = FALSE)
   }
+ 
+  
   rm(TYPE, TYPE_i, TYPE_j)
   
   
@@ -195,6 +191,11 @@ for (m in msaList){
   Th <-C[,c(paste(typeVec,"i",sep="_"), 
             paste(typeVec,"j",sep="_"),
             "essential_i","essential_j","contactlvl")]
+  
+  # check population the same before/after merge with types  
+  check<-C %>% group_by(age_i, naics_i, work_poi_i, sick_i, shift_i, wfh_i) %>% summarise(n=mean(num_people))
+  pop2<-sum(check$n)
+  stopifnot(pop1==pop2)  
   
   #####################################################################
   ### export aggregate demogrpahics (not for contact matrix and SEIR)

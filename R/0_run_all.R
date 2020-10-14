@@ -36,7 +36,7 @@ source(getCodePath("1_config.R"))
 source(getCodePath("3b_gen_contact.R"))
 
 ## run grid search 
-source(getCodePath("4_grid_search.R"))
+source(getCodePath("4b_grid_search.R"))
 
 ## run SIR
 source(getCodePath("5_seir.R"))

@@ -63,8 +63,7 @@ ctMatData <<- "C_msa"
 policyParm <<- file.path(parmPath, "msa_poi_policy_scenarios_dates.csv")
 
 # inputs for grid search calibration
-# gsParm <<- file.path(parmPath, "gridsearch.csv")
-gsParm <<- file.path(parmPath, "gridsearch_v2.csv")
+gsParm <<- file.path(parmPath, "gridsearch.csv")
 
 # calibrated parameter name
 caliParm  <<- "calibrated_parm_msa"
@@ -83,8 +82,8 @@ policyPOILetterCode <<- c("W", "S", "N", "B", "R", "P", "F", "E", "M")
 
 
 #default E and M for initial vs subsequent phases in calibration
-policyCaliEM <<- c("-E2-M4","-E2-M1")
-
+# policyCaliEM <<- c("-E2-M4","-E2-M1")
+policyCaliEM <<- c("-E2-M4","-E2-M4","-E2-M1","-E2-M1")
 
 # all combinations of reopening policies including POI policies
 contactPolicyPOI<<-expand.grid(1:4,1:3,1:3,1:2,1:2,1:2,1:2,1:2,1:4)
@@ -107,8 +106,8 @@ genRef4Area<<-0
 
 ## MSAs
 # NYC, Chicago, Sacramento, Houston, Kansas City
-msaList<<-c("5600","1600","6920","3760")
-# msaList<<-c("3760")
+# msaList<<-c("5600","1600","6920","3760")
+msaList<<-c("1600")
 
 #####################################
 # key global variables
@@ -167,6 +166,7 @@ vparameters0 <<- c(gamma=gamma,betaH=betaH,eta=eta,psi=psi)
 #type specific parameters
 EPSILON<<-PAR$epsilon
 TAU    <<-PAR$tau
+
 # rate at which Ia flow into hospital
 HOSPITAL <<-PAR$hospital * TAU * psi
 

@@ -48,8 +48,11 @@ SEIIRRD_model=function(t, x, vparameters){
     #infected per active employed in healthcare
     healthNeed <- as.vector( sum(Ihc) / sum((S+E+Ia+Ins+Rqd+Rnq) * healthVec))
     
+    # # transmission
+    betaV = beta0*(oldSickInd==0) + beta1*(oldSickInd==1)
+    
     #transition
-    dS   = -as.matrix(S*beta)*(as.matrix(Cmat)%*%as.matrix((Ia+Ins)/N)) - as.matrix(S*betaH)*healthNeed*healthVec
+    dS   = -as.matrix(S)*betaV*(as.matrix(Cmat)%*%as.matrix((Ia+Ins)/N)) - as.matrix(S*betaH)*healthNeed*healthVec
     dE   = -epsilonV*as.matrix(E) -dS 
     dIa  = +epsilonV*as.matrix(E) -tauV*as.matrix(Ia)                              
     dIns =                        +tauV*as.matrix(Ia)*(1-psi) -gamma*as.matrix(Ins)  
@@ -203,6 +206,9 @@ globalTypeVectors <- function(types) {
   
   #healthcare worker
   healthVec <<-(types$naics==heathNAICS) * (types$work_poi==0)
+  
+  #old/sick people
+  oldSickInd <<- (types$sick==1 | types$age>=4)
 }
 
 # check if file exist and load  -----------------------------------------------------
@@ -287,11 +293,13 @@ loadPolicyDates <- function(m){
 }
 
 
-# indicate fraction of people in this type that are actively working  -----------------------------------------------------
+# indicate fraction of people in this type that are actively working, 
+# and also number of people in hospitalization  -----------------------------------------------------
 tagActiveEmp <- function(sim1) {
   # add open status to sim1
   for (i in 1:length(types$ego)){
-    sim1[[paste("active",i,sep="")]]<-types$active_emp[i]
+    sim1[[paste("active"  ,i,sep="")]]<-types$active_emp[i]
+    sim1[[paste("hospital",i,sep="")]]<-sim1[[paste("Ia",i,sep="")]] * HOSPITAL[ageSickVec[i]]
   }
   return(sim1)
 }  

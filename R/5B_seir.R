@@ -73,11 +73,15 @@ runSir <- function(placeCnt, placePop, policy, par, simRef){
     
     # output compartments to plot
     if (j==np){
-      state2plot<-c("Deaths","Cases","Employment Loss")
-      what2plot<-list(D=c("D"),C=c("Ihc","Rq","Rqd","D"),Emp=c("Ihc","Rq","D"))
+      what2plot<-list(D=c("D"),C=c("Ihc","Rq","Rqd","D"),Emp=c("Ihc","Rq","D"), Ia=c("hospital"))
       var <-matrix(0, length(what2plot), max(TTT)+1)
       for (i in 1:length(what2plot)){
         var[i,] <- extractSeveralState(what2plot[[i]],sim0)
+        if (i==4){
+          ### number of people in hospital, assuming each inpatient stay for 10 days
+          hosp <- cumsum(var[i,])
+          var[i,] <- c(hosp[1:10], hosp[11:length(hosp)]-hosp[1:(length(hosp)-10)])
+        }
       }
     }
   }
@@ -91,36 +95,37 @@ runSir <- function(placeCnt, placePop, policy, par, simRef){
 plotSIR2MSA <- function(fn, var, small, legendMSA) {
   
   # state to plot
-  name2plot<-c("Deaths","Cases","EmpLoss")
+  name2plot<-c("Deaths","Cases","EmpLoss","Hospital")
   
   # different y axis range, depending on MSAs and run version
-  colvec <-c(6,7,1)
-  colvec2<-c(4,5,2)
+  colvec <-c(6,6,6,6)
+  colvec2<-c(4,4,4,4)
   if (Generic==2){
-    yub<-c(0.9,70,40)
+    yub<-c(0.9,70,40,1)
   }else{
     if (small==1){
-      yub<-c(0.001,0.2,0.1)
+      yub<-c(0.001,0.2,0.1,0.002)
     }else{
-      yub<-c(0.8,60,30)    
+      yub<-c(0.8,60,30,0.8)    
     }    
   }
-
-  for (i in 1:length(colvec)){
+  l<-length(colvec)
+  
+  for (i in 1:l){
     
     if (fn!="")  fn1 <- file.path(outPath, "figure", paste(name2plot[i], fn, sep=""))
     if (fn!="")  png(fn1)
     color  <- mycol[colvec[i]]
     color2 <- mycol[colvec2[i]]
-    idx <- (i-1)*3
+
     ### plot two regions
     plot(0:max(TTT),var[i,]
          ,type="l",ylab="Percent of population",xlab="",ylim=c(0,yub[i]),lwd=2,col=color)
-    lines(0:max(TTT),var[3+i,],
+    lines(0:max(TTT),var[l+i,],
           type="l",lty=2,lwd=2,col=mycol[colvec[i]])
-    lines(0:max(TTT),var[6+i,],
+    lines(0:max(TTT),var[l*2+i,],
           type="l",lty=5,lwd=2,col=mycol[colvec2[i]])
-    lines(0:max(TTT),var[9+i,],
+    lines(0:max(TTT),var[l*3+i,],
           type="l",lty=1,lwd=2,col=mycol[colvec2[i]])
     
     legend("topleft",
@@ -134,8 +139,6 @@ plotSIR2MSA <- function(fn, var, small, legendMSA) {
       print(paste("  saved plot:",fn1))
     }
   }
-  
-
 }
 
 
@@ -151,8 +154,19 @@ np <- length(grep("Scenario",colnames(P),perl=T))
 
 
 # we need to run all 4 MSAs together, in the following order
-msaListCntct<<-c("5600","1600","5600","1600","6920","3760","6920","3760")
-msaListCmpst<<-c("5600","5600","1600","1600","6920","6920","3760","3760")
+msaListCntct<<-c("5600","1600","5600","1600",
+                 "6920","3760","6920","3760")
+msaListCmpst<<-c("5600","5600","1600","1600",
+                 "6920","6920","3760","3760")
+
+# msaListCntct<<-c("5600","1600","5600","1600",
+#                  "6920","3760","6920","3760",
+#                  "5600","3760","5600","3760",
+#                  "1600","3760","1600","3760")
+# msaListCmpst<<-c("5600","5600","1600","1600",
+#                  "6920","6920","3760","3760",
+#                  "5600","5600","3760","3760",
+#                  "1600","1600","3760","3760")
 
 
 #NP throughout
@@ -193,10 +207,20 @@ for (m in msaListCntct){
       legendMSA <- c("NYC Contact - NYC Population", "Chicago Contact - NYC Population",
                      "NYC Contact - Chicago Population", "Chicago Contact - Chicago Population")
       small<-0
-    }else{
+    }else if (m_num<=8){
       legendMSA <- c("Sacramento Contact - Sacramento Population", "Kansas City Contact - Sacramento Population",
                      "Sacramento Contact - Kansas City Population", "Kansas City Contact - Kansas City Population")
       small<-1
+    }else if (m_num<=12){
+      legendMSA <- c("NYC Contact - NYC Population", "Kansas City Contact - NYC Population",
+                     "NYC Contact - Kansas City Population", "Kansas City Contact - Kansas City Population")
+      small<-0
+    }else if (m_num<=16){
+      legendMSA <- c("Chicago Contact - Chicago Population", "Kansas City Contact - Chicago Population",
+                     "Chicago Contact - Kansas City Population", "Kansas City Contact - Kansas City Population")
+      small<-0
+    }else{
+      stop("not coded up figure format")
     }
     
     fnEnd <- paste('_', m, '_', msaListCntct[m_num-1], verTag, ".png", sep="")
