@@ -195,7 +195,7 @@ for (m in msaList){
   # check population the same before/after merge with types  
   check<-C %>% group_by(age_i, naics_i, work_poi_i, sick_i, shift_i, wfh_i) %>% summarise(n=mean(num_people))
   pop2<-sum(check$n)
-  stopifnot(pop1==pop2)  
+  stopifnot(round(pop1-pop2)==0)  
   
   #####################################################################
   ### export aggregate demogrpahics (not for contact matrix and SEIR)

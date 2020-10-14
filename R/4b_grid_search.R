@@ -212,7 +212,7 @@ gridSearch <- function(m, covid){
   tRange<-seq(gsPar$T_range_start, gsPar$T_range_end)-T1
   
   #show several lines in calibration plot
-  tVertL<-c(TTTcali[2:np],min(tRange)+T1,max(tRange)+T1)
+  tVertL<-c(TTTcali[2:(np+1)],min(tRange)+T1,max(tRange)+T1)
   
   ### death and cases in the data
   dead<-covid$deathper100k;  try(if(any(dead<0)) stop("Error in death data."))
@@ -296,9 +296,9 @@ gridSearch <- function(m, covid){
         oos_err<-matrix(0,length(cw_list),2)
         for (cw in 1:length(cw_list)){
           sse_both<-sse + cw_list[cw]*rowSums(err_case[,fitRange]^2)
-          # selected parameter to minimize out death and cases
+          # selected parameter to minimize out death
           oos_err[cw,2]<-which.min(sse_both)
-          #out of sample fit
+          #out of sample fit on deaths
           oos_err[cw,1]<-sum(err[oos_err[cw,2],max(fitRange):nt]^2)
         }
         gstar<-oos_err[which.min(oos_err[,1]),2]
