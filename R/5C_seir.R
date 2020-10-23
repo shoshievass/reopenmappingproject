@@ -148,13 +148,24 @@ for (m in msaList){
   aggOut<-rbind(aggOut, cbind(as.numeric(m)*rep(1,length(y)), frontier$deaths, y, X[,2]))
 }
 
+
+
 ### plot frontier for each msa
+fn <- file.path(outPath, "figure", "frontier_v1.pdf")
+pdf(fn)
 msa<-aggOut[,1]
-plot( -aggOut[msa==5600,3], -aggOut[msa==5600,4], type="l")
-lines(-aggOut[msa==1600,3], -aggOut[msa==1600,4], type="l", col="red")
-lines(-aggOut[msa==6920,3], -aggOut[msa==6920,4], type="l", col="blue")
-lines(-aggOut[msa==3760,3], -aggOut[msa==3760,4], type="l", col="purple")
+plot( -aggOut[,4]+1, -aggOut[,3]+1, type="l", col="white",
+      ylab="Life saved relative to 8-week no policy",xlab="Employment saved relative to 8-week no policy")
+lines(-aggOut[msa==5600,4]+1, -aggOut[msa==5600,3]+1, type="l", col="dimgray")
+lines(-aggOut[msa==1600,4]+1, -aggOut[msa==1600,3]+1, type="l", col="red")
+lines(-aggOut[msa==6920,4]+1, -aggOut[msa==6920,3]+1, type="l", col="blue")
+lines(-aggOut[msa==3760,4]+1, -aggOut[msa==3760,3]+1, type="l", col="orange")
 
+legend("bottomleft",
+       legend=c("NYC", "Chicago", "Sacramento", "Kansas City"),
+       col=c("dimgray", "red", "blue", "orange"),
+       lty=c(1,1,1,1), 
+       horiz=F,lwd=1.3,bty="n",cex=1)
 
-
+dev.off()
 
