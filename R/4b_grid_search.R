@@ -26,7 +26,8 @@ gridPar <- function(parm, R0scale, phase){
   }else{
     I0<-initNumIperType
     beta0<-parm[[1]]/R0scale
-    beta1<-parm[[2]]/R0scale    
+    # beta1<-parm[[2]]/R0scale 
+    beta1<-beta0
   }
 
   if(min(beta0,beta1)<0) stop("transmission rate needs to be >=0!")
@@ -235,9 +236,15 @@ gridSearch <- function(m, covid){
   par_star<-c()
   
   sim0<-NA
+  sim0_augmented<-NA
   for (t in 1:np){
     ### range of time in this phase
-    ttt <- c(TTTcali[t]:TTTcali[t+2])+1
+    if (m=="5600" & t==2){
+      ### in NYC, the second phase is very long, so we use phase 2-4 to estimate parameters during 2
+      ttt <- c(TTTcali[t]:TTTcali[t+3])+1
+    }else{
+      ttt <- c(TTTcali[t]:TTTcali[t+2])+1
+    }
     fitRange <- max(min(tRange),min(ttt)):min(max(ttt),max(tRange))
     print(paste("Phase", t,"/",np,": estimation time range:", 
                 min(fitRange), "to", max(fitRange)))
@@ -245,8 +252,8 @@ gridSearch <- function(m, covid){
     ### select parameters in this phase
     if (t==1){
       par_select<-c(t:(t+1))
-    }else if (t==np){
-      par_select<-c((t+1):(t+2))
+    # }else if (t==np){
+    #   # par_select<-c((t+1):(t+2))
     }else{
       par_select<-c(t+1)
     }
@@ -266,7 +273,7 @@ gridSearch <- function(m, covid){
       ### for each parameter 
       for (i in 1:ng){
         sim_0_tt<-sim0
-        for (tt in t:(t+1)){
+        for (tt in t:ifelse((m=="5600" & t==2), t+2,t+1)){
           sim_j <- runSEIR(gList[i,], R0scale, t, tt, CmatList, TTTcali, sim_0_tt)
           if (tt>1){
             sim_j<-rbind(sim_0_tt[1:TTTcali[tt],], sim_j)
@@ -286,26 +293,26 @@ gridSearch <- function(m, covid){
       err<-fitDeath - matrix(1,ng,1)%*%dead[1:max(ttt)]
       sse<-rowSums(err[,fitRange]^2) 
       
-      ## also use cases in the last phase to min out of sample error
-      if (t==np){
-        ## error fitting demeaned log cases
-        err_case<-demeanSeries(log(fitCase)) - matrix(1,ng,1)%*%demeanSeries(log(case))
-        
-        ## for each weight
-        cw_list<-seq(0,200,25)
-        oos_err<-matrix(0,length(cw_list),2)
-        for (cw in 1:length(cw_list)){
-          sse_both<-sse + cw_list[cw]*rowSums(err_case[,fitRange]^2)
-          # selected parameter to minimize out death
-          oos_err[cw,2]<-which.min(sse_both)
-          #out of sample fit on deaths
-          oos_err[cw,1]<-sum(err[oos_err[cw,2],max(fitRange):nt]^2)
-        }
-        gstar<-oos_err[which.min(oos_err[,1]),2]
-      }else{
-        gstar<-which.min(sse)
-      }
-      
+      # ## also use cases in the last phase to min out of sample error
+      # if (t==np){
+      #   ## error fitting demeaned log cases
+      #   err_case<-demeanSeries(log(fitCase)) - matrix(1,ng,1)%*%demeanSeries(log(case))
+      #   
+      #   ## for each weight
+      #   cw_list<-seq(0,200,25)
+      #   oos_err<-matrix(0,length(cw_list),2)
+      #   for (cw in 1:length(cw_list)){
+      #     sse_both<-sse + cw_list[cw]*rowSums(err_case[,fitRange]^2)
+      #     # selected parameter to minimize out death
+      #     oos_err[cw,2]<-which.min(sse_both)
+      #     #out of sample fit on deaths
+      #     oos_err[cw,1]<-sum(err[oos_err[cw,2],max(fitRange):nt]^2)
+      #   }
+      #   gstar<-oos_err[which.min(oos_err[,1]),2]
+      # }else{
+      #   gstar<-which.min(sse)
+      # }
+      gstar<-which.min(sse)
       #best fit
       g0   <-as.double(gList[gstar,])
       deadfit <- fitDeath[gstar,]
@@ -325,18 +332,22 @@ gridSearch <- function(m, covid){
     
     ### get output for the optimal parameter
     sim_j <- runSEIR(gList[gstar,], R0scale, t, t, CmatList, TTTcali, sim0)
-
+    # add tag to keep track of additional outcomes
+    sim_j_augmented <- tagActiveEmp(sim_j)
+    
     ### record optimized phase 1 to t and print calibrated parameter
     if (t>1){
       sim0<-rbind(sim0[1:TTTcali[t],], sim_j)
-      if (t<np){
+      sim_0_augmented<-rbind(sim_0_augmented[1:TTTcali[t],], sim_j_augmented)
+      # if (t<np){
         print(paste(" beta_",t,"=", format(gList[gstar,],digits=4),sep=""))
-      }else{
-        print(paste(" beta_",t,"(young/healthy)=", format(gList[gstar,1],digits=4),
-                    " beta_",t,"(old/sick)=", format(gList[gstar,2],digits=4),sep=""))
-      }
+      # }else{
+      #   print(paste(" beta_",t,"(young/healthy)=", format(gList[gstar,1],digits=4),
+      #               " beta_",t,"(old/sick)=", format(gList[gstar,2],digits=4),sep=""))
+      # }
     }else{
       sim0<-sim_j
+      sim_0_augmented<-sim_j_augmented
       print(paste(" I0=", format(gList[gstar,1],digits=4),
                   " beta_",t,"=", format(gList[gstar,2],digits=4),sep=""))   
       parm<-gridPar(gList[gstar,], R0scale, t)
@@ -347,10 +358,11 @@ gridSearch <- function(m, covid){
     parm<-gridPar(gList[gstar,], R0scale, t)
     if (t==1){
       par_star<-c(par_star, parm$I0, parm$beta0)
-    }else if (t<np){
-      par_star<-c(par_star, parm$beta0)
+    # }else if (t<np){
+    #   par_star<-c(par_star, parm$beta0)
     }else{
-      par_star<-c(par_star, parm$beta0, parm$beta1)
+      # par_star<-c(par_star, parm$beta0, parm$beta1)
+      par_star<-c(par_star, parm$beta0)
     }
     
     end_time <- Sys.time()
@@ -363,13 +375,19 @@ gridSearch <- function(m, covid){
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   
   
-  
-  ### export calibration results as csv
+
+  ### export calibration results and key SEIR outputs as csv
   parmOut<-matrix(par_star,1,dim(step)[2])
   colnames(parmOut)<-c("I0",paste("beta",1:(dim(step)[2]-1),sep=""))
   checkWrite(file.path(calibratedParPath, paste(caliParm, m, ".csv", sep="")),
              parmOut, "calibrated parameters")
   
+  modelOut <- calOutcome(sim_0_augmented)
+  colnames(modelOut)<-c("Deaths", "Case", "EmpDaysLost", "HospitalizationDays", "ICUDays", "Population",
+                        paste("Death", ageNames, sep=""),
+                        paste("Case", ageNames, sep=""))
+  checkWrite(file.path(calibratedParPath, paste(caliParm, m, "_keyOutputs.csv", sep="")),
+             modelOut, "key SEIR outputs at calibrated parameters")  
   
   ### plot calibration result
   fn <- file.path(outPath, "figure", paste("calibrate_beta_I0_death_msa", m, ".pdf", sep=""))
@@ -395,6 +413,26 @@ for (m in msaList){
   
   ### death data for this MSA
   covid<-COVID[COVID$msa==m,c("t","deathper100k","caseper100k")]
+  
+  # ### there are two massive discrete jumps in NYC, we can make adjustment
+  # ### compute fraction jump, and apply it to death prior to the jump
+  # if (m=="5600"){
+  #   deaths0<-covid$deathper100k
+  #   deaths<-deaths0
+  #   max_jump<-max(diff(deaths))
+  #   while (max_jump>8){
+  #     # time of jump
+  #     t_max <-which.max(diff(deaths))
+  #     # compute pct jump and apply to deaths series before jumps
+  #     jump_pct <- diff(deaths)[t_max]/deaths[t_max-1]
+  #     deaths[1:t_max]<-deaths[1:t_max]*(1+jump_pct)
+  #     max_jump<-max(diff(deaths))
+  #   }
+  #   plot(1:dim(covid)[1], deaths0, type="l")
+  #   lines(1:dim(covid)[1],deaths,type="l", col="red")
+  #   # use adjusted deaths
+  #   covid$deathper100k<-deaths
+  # }
   
   ### estimate parameter
   gridSearch(m, covid)

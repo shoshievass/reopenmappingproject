@@ -173,8 +173,6 @@ for (m in msaList){
     C <- merge(x = C, y = TYPE_i, by = c("age_i", "naics_i"), all = FALSE)
     C <- merge(x = C, y = TYPE_j, by = c("age_j", "naics_j"), all = FALSE)
   }
- 
-  
   rm(TYPE, TYPE_i, TYPE_j)
   
   
@@ -306,7 +304,7 @@ for (m in msaList){
     Cmat$rate <- as.integer(interaction(
       Cmat$age_j, Cmat$naics_j, Cmat$work_poi_j, Cmat$sick_j, Cmat$wfh_j, Cmat$shift_j, 
       drop = TRUE, lex.order = TRUE))
-    if(min(unique(Cmat$ego) == unique(Cmat$rate))==0){
+    if(min(sort(unique(Cmat$ego)) == sort(unique(Cmat$rate)))==0){
       stop("focal and target types in the contact matrix need to be the same!")
     }
     

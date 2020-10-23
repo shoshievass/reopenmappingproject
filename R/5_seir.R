@@ -23,7 +23,9 @@ runSir <- function(place, policy, par, simRef){
     
     # load default parameters and set transmission rate
     vpar<-vparameters0
-    vpar["beta"]<-setBeta(contact, par, j) 
+    parm<-setBeta(contact, par, j) 
+    vpar["beta0"] <- parm$beta0
+    vpar["beta1"] <- parm$beta1
     
     ### initial condition
     inits<-initialCondition(TTT[j],sim0)
@@ -68,17 +70,6 @@ start_time <- Sys.time()
 ### get max number of policy scenarios across MSAs
 P <- checkLoad(policyParm) 
 np <- length(grep("Scenario",colnames(P),perl=T))
-
-# aggregate key SEIR outputs
-ageG <-c("5_17", "18_49", "50_59", "60_69", "70_79", "80")
-df<-data.frame(matrix(ncol = np+8+length(ageG)*2, nrow = 0, 
-                  dimnames=list(NULL, 
-                        c(paste("Policy",1:np, sep=""), 
-                          "MSA", "BaselineAdjDeaths", "BaselineAdjCases", "BaselineAdjEmpDays", 
-                          "Deaths", "Case", "EmpDaysLost", "Population",
-                          paste("Death", ageG, sep=""),
-                          paste("Case", ageG, sep="")))), stringsAsFactors=FALSE)
-dfRow<-0
 policyVecName0<-rep("",np)
 
 # foreach MSA
@@ -101,7 +92,26 @@ for (m in msaList){
   #policy combo
   policyCombo<<-genPolicy(reopenPolicy, msaPD$refPolicy)
   
+  # demo graphic accounting inputs
+  Demo <- checkLoad(demoAcct) 
+  Demo <- Demo[Demo$msa==m,]
   
+  # aggregate key SEIR outputs
+  outcomesofinterest<-c("MSA", 
+                      "BaselineAdjDeaths", "BaselineAdjCases", "BaselineAdjEmpDays", "BaselineAdjHospDays",  "BaselineAdjICUDays", 
+                      "Deaths", "Case", "EmpDaysLost", "HospitalizationDays", "ICUDays", "Population")
+  df<-data.frame(matrix(ncol = np+length(outcomesofinterest)+length(ageNames)*2+length(raceincomeNames)*6, nrow = dim(policyCombo)[1], 
+                        dimnames=list(NULL, 
+                        c(paste("Policy",1:np, sep=""), outcomesofinterest,
+                          paste("Death", ageNames, sep=""),
+                          paste("Case" , ageNames, sep=""),
+                          paste("DeathRate",      raceincomeNames, sep=""),
+                          paste("HospitalDays",   raceincomeNames, sep=""),
+                          paste("ICUDays",        raceincomeNames, sep=""),
+                          paste("AvgEmpDaysLost", raceincomeNames, sep=""),
+                          paste("AvgAge",         raceincomeNames, sep=""),
+                          paste("Prob",           raceincomeNames, sep="")))), stringsAsFactors=FALSE)
+
   # for each policy combo
   simRef<-NA
   for (i in 1:dim(policyCombo)[1]){
@@ -111,7 +121,7 @@ for (m in msaList){
     
     ## sir across phases
     sim_i<-runSir(m, as.vector(policyCombo[i,]), par, simRef)
-    outstats_i<-calOutcome(sim_i)
+    outstats_i<-calOutcome(sim_i, Demo)
     
     #the first is reference policies in each MSA
     if (i==1){
@@ -120,18 +130,19 @@ for (m in msaList){
     }
     
     ## collect outputs
-    dfRow<-dfRow+1
-    policyVecName <- policyVecName0
-    policyVecName[1:np]<-gsub("_","",policyCombo[i,])
-    df[dfRow,]<-c(policyVecName, m, outstats_i[1:3]/outstats_ref[1:3]-1,outstats_i)
+    policyVecName      <- policyVecName0
+    policyVecName[1:np]<- gsub("_","",policyCombo[i,])
+    df[i,]<-c(policyVecName, m, outstats_i[1:5]/outstats_ref[1:5]-1,outstats_i)
   }
+  
+  #export csv output for this msa
+  checkWrite(file.path(outPath, paste("Agg_SIR_",m,".csv", sep="")), 
+             df, "aggregate SIR outputs") 
 }
 rm(Cmat, par)
 
 
-#export csv
-checkWrite(file.path(outPath, paste("Agg_SIR.csv", sep="")), 
-           df, "aggregate SIR outputs") 
+
 
 end_time <- Sys.time()
 print(end_time - start_time)

@@ -10,7 +10,7 @@
 #####################################
 ## check packages
 #####################################
-packages <- c("deSolve","plyr","dplyr","tidyr")
+packages <- c("deSolve","plyr","dplyr","tidyr","gtools")
 newPackages <- packages[!(packages %in% installed.packages()[,"Package"])]
 if(length(newPackages)) install.packages(newPackages)
 
@@ -18,6 +18,7 @@ library(deSolve)
 library(plyr)
 library(dplyr)
 library(tidyr)
+library(gtools)
 
 
 #####################################
@@ -77,24 +78,36 @@ caliParm  <<- "calibrated_parm_msa"
 
 ## contact definition for 
 # W(work), S(school), N(neighbor) contacts, whether we quarantine E(elderly), M(mask), although M no impact on contact
-policyLetterCode <<- c("W", "S", "N", "E", "M")
+policyLetterCode    <<- c("W", "S", "N", "E", "M")
 policyPOILetterCode <<- c("W", "S", "N", "B", "R", "P", "F", "E", "M")
 
 
 #default E and M for initial vs subsequent phases in calibration
-# policyCaliEM <<- c("-E2-M4","-E2-M1")
-policyCaliEM <<- c("-E2-M4","-E2-M4","-E2-M1","-E2-M1")
+# by default, we do not isolate elderly,
+# M1-4 corresponds to beta estimates in each period
+policyCaliEM <<- c("-E2-M1","-E2-M2","-E2-M3","-E2-M4")
 
 # all combinations of reopening policies including POI policies
 contactPolicyPOI<<-expand.grid(1:4,1:3,1:3,1:2,1:2,1:2,1:2,1:2,1:4)
 poiLevel <<- c("restaurants", "retail", "services", "entertainment")
 
-
-### key policies considered
+### key policies considered (not specifying the mask)
 #NP, EO, CR, AS, WFH, 60+
-reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2,1),c(1,1,1,1,1,1,1,2,1),c(4,3,1,2,2,2,2,2,1),c(3,2,1,2,2,2,2,2,1),c(2,3,1,2,2,2,2,2,1),c(4,3,1,2,2,2,2,1,1))
-reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2,1),c(2,3,1,2,2,2,2,2,1))
+# reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2),
+#                      c(1,1,1,1,1,1,1,2),
+#                      c(4,3,1,2,2,2,2,2),
+#                      c(3,2,1,2,2,2,2,2),
+#                      c(2,3,1,2,2,2,2,2),
+#                      c(4,3,1,2,2,2,2,1))
 
+#NP, EO, CR, NR, AS, WFH, 60+
+reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2),
+                     c(1,1,1,1,1,1,1,2),
+                     c(4,1,2,2,2,2,1,2),
+                     c(4,1,3,2,2,2,2,2),
+                     c(3,2,1,2,2,2,2,2),
+                     c(2,1,1,1,2,1,1,2),
+                     c(4,3,1,2,2,2,2,1))
 
 ### all possible combo for reopen policy in the final phase
 # reopenPolicy<<-contactPolicyPOI
@@ -103,11 +116,14 @@ reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2,1),c(2,3,1,2,2,2,2,2,1))
 # this is for area plot
 genRef4Area<<-0
 
+# do we run interaction of policies across all phases (=1) or keep first 3 phases as reference policies?
+AllPhases<<-1
+
 
 ## MSAs
 # NYC, Chicago, Sacramento, Houston, Kansas City
 # msaList<<-c("5600","1600","6920","3760")
-msaList<<-c("1600")
+msaList<<-c("5600")
 
 #####################################
 # key global variables
@@ -120,11 +136,19 @@ age60<<-6
 ## school age (age>=school age is definitely not attending schools)
 ageSchool<<-3
 
+## age group names
+ageNames <<-c("5_15", "16-29", "30_39", "40_49", "50_59", "60_69", "70_79", "80")
+raceincomeNames <<-c("BlackLowInc", "BlackMidInc", "BlackHigInc",
+                     "HispnLowInc", "HispnMidInc", "HispnHigInc",
+                     "WhiteLowInc", "WhiteMidInc", "WhiteHigInc")
+
 ## naics code for healthcare
 heathNAICS<<-62
 
 ## t0, starting time for SIR model
 TNAUGHT <<- as.Date(unique("3/5/2020"), "%m/%d/%Y")
+
+
 
 #####################################
 # input/output versions
@@ -134,13 +158,13 @@ TNAUGHT <<- as.Date(unique("3/5/2020"), "%m/%d/%Y")
 verTag <<-"_combo"
 
 # save detailed seir compartment X type X time level results and plots for internal checking?
-outputSIR<<-1
+outputSIR<<-0
 
 # estimated or generic beta
 # 0: use MSA specific estimated parameter
 # 1: use MSA specific beta and generic initial condition
 # 2: use generic parameters
-Generic<<-1
+Generic<<-2
 if (Generic>0){
   verTag <<-paste(verTag,'_par',Generic,sep="")
 }
@@ -167,8 +191,14 @@ vparameters0 <<- c(gamma=gamma,betaH=betaH,eta=eta,psi=psi)
 EPSILON<<-PAR$epsilon
 TAU    <<-PAR$tau
 
-# rate at which Ia flow into hospital
+# rate at which Ia flow into hospital/icu
 HOSPITAL <<-PAR$hospital * TAU * psi
+ICU      <<-PAR$hospital * TAU * psi
+
+# hospitalization/icu duration
+HOSPDAYS<<-10
+ICUDAYS<<-5
+
 
 #input mortality conditional on infected, transform into transition rate conditional on symptomatic
 mort     <-PAR$mort
@@ -183,6 +213,7 @@ infectDuration<<-psi * (1/mean(TAU)) + (1-psi) * (1/mean(TAU) + 1/gamma)
 
 # initial condition: number of people in I^A per type
 initNumIperType<<-1
+
 
 
 #########################################################
