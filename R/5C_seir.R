@@ -79,8 +79,11 @@ policyCombo<-policies[apply(t(diff(t(policies))), 1, FUN=min) ==0,]
 
 ## the rest of policies
 # W(work), 
-# S(school), N(neighbor), POI-resturants, POI-retail, POI-personal service, POI-entertainment, eldery, mask=1
+# S(school), N(neighbor), POI-resturants, POI-retail, POI-personal service, POI-entertainment, (E)eldery, mask=1
 # HY: always set mask to 1, we can test different policies for school, etc and see what frontier looks like
+# note due to large file size of contact matrices, I only commited S=1 or 3, N=2 and E=2
+# so the possible non-work policies to explore are c({1,3},2,{1,2},{1,2},{1,2},{1,2},2,1)
+# work policies has 1 (essential only), 2 (wfh), 3 (alternating schedule), 4(full reopen)
 policyNonWork<-c(1,2,1,1,1,1,2,1)
 ###################################
 
