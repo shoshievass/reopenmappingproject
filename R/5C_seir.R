@@ -150,7 +150,7 @@ for (m in msaList){
 
 
 
-### plot frontier for each msa
+### plot frontier for each msa - smoothed
 fn <- file.path(outPath, "figure", "frontier_v1.pdf")
 pdf(fn)
 msa<-aggOut[,1]
@@ -160,6 +160,25 @@ lines(-aggOut[msa==5600,4]+1, -aggOut[msa==5600,3]+1, type="l", col="dimgray")
 lines(-aggOut[msa==1600,4]+1, -aggOut[msa==1600,3]+1, type="l", col="red")
 lines(-aggOut[msa==6920,4]+1, -aggOut[msa==6920,3]+1, type="l", col="blue")
 lines(-aggOut[msa==3760,4]+1, -aggOut[msa==3760,3]+1, type="l", col="orange")
+
+legend("bottomleft",
+       legend=c("NYC", "Chicago", "Sacramento", "Kansas City"),
+       col=c("dimgray", "red", "blue", "orange"),
+       lty=c(1,1,1,1), 
+       horiz=F,lwd=1.3,bty="n",cex=1)
+
+dev.off()
+
+### plot frontier for each msa - non-smoothed
+fn <- file.path(outPath, "figure", "frontier_v2.pdf")
+pdf(fn)
+msa<-aggOut[,1]
+plot( -aggOut[,4]+1, -aggOut[,2]+1, type="l", col="white",
+      ylab="Life saved relative to 8-week no policy",xlab="Employment saved relative to 8-week no policy")
+lines(-aggOut[msa==5600,4]+1, -aggOut[msa==5600,2]+1, type="l", col="dimgray")
+lines(-aggOut[msa==1600,4]+1, -aggOut[msa==1600,2]+1, type="l", col="red")
+lines(-aggOut[msa==6920,4]+1, -aggOut[msa==6920,2]+1, type="l", col="blue")
+lines(-aggOut[msa==3760,4]+1, -aggOut[msa==3760,2]+1, type="l", col="orange")
 
 legend("bottomleft",
        legend=c("NYC", "Chicago", "Sacramento", "Kansas City"),
