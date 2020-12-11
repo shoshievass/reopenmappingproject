@@ -12,22 +12,16 @@
 ### parse calibrated parameter
 gridPar <- function(parm, R0scale, phase){
   if (phase==1){
-    ### initial condition
+    # initial condition
     I0<-exp(parm[[1]])
     if(I0<=0) stop("initial infected fraction needs to be >0!")
     
-    #transmission rate
+    # transmission rate
     beta<-parm[[2]]/R0scale
-    # beta1<-beta0
-  # }else if (phase<np){
-  #   I0<-initNumIperType
-  #   beta<-parm[[1]]/R0scale
-  #   beta1<-beta0
   }else{
+    # after phase 1, we only estimate transmission rate
     I0<-initNumIperType
     beta<-parm[[1]]/R0scale
-    # beta1<-parm[[2]]/R0scale 
-    # beta1<-beta0
   }
 
   if(min(beta)<0) stop("transmission rate needs to be >=0!")
@@ -61,8 +55,6 @@ gridPoints <- function(lb, ub, step, j, g0){
   }
   return(grid)
 }
-
-
 
 
 ### set up grid points
@@ -291,27 +283,8 @@ gridSearch <- function(m, covid){
       ## fit death, min squared loss
       err<-fitDeath - matrix(1,ng,1)%*%dead[1:max(ttt)]
       sse<-rowSums(err[,fitRange]^2) 
-      
-      # ## also use cases in the last phase to min out of sample error
-      # if (t==np){
-      #   ## error fitting demeaned log cases
-      #   err_case<-demeanSeries(log(fitCase)) - matrix(1,ng,1)%*%demeanSeries(log(case))
-      #   
-      #   ## for each weight
-      #   cw_list<-seq(0,200,25)
-      #   oos_err<-matrix(0,length(cw_list),2)
-      #   for (cw in 1:length(cw_list)){
-      #     sse_both<-sse + cw_list[cw]*rowSums(err_case[,fitRange]^2)
-      #     # selected parameter to minimize out death
-      #     oos_err[cw,2]<-which.min(sse_both)
-      #     #out of sample fit on deaths
-      #     oos_err[cw,1]<-sum(err[oos_err[cw,2],max(fitRange):nt]^2)
-      #   }
-      #   gstar<-oos_err[which.min(oos_err[,1]),2]
-      # }else{
-      #   gstar<-which.min(sse)
-      # }
       gstar<-which.min(sse)
+      
       #best fit
       g0   <-as.double(gList[gstar,])
       deadfit <- fitDeath[gstar,]
@@ -338,12 +311,7 @@ gridSearch <- function(m, covid){
     if (t>1){
       sim0<-rbind(sim0[1:TTTcali[t],], sim_j)
       sim_0_augmented<-rbind(sim_0_augmented[1:TTTcali[t],], sim_j_augmented)
-      # if (t<np){
-        print(paste(" beta_",t,"=", format(gList[gstar,],digits=4),sep=""))
-      # }else{
-      #   print(paste(" beta_",t,"(young/healthy)=", format(gList[gstar,1],digits=4),
-      #               " beta_",t,"(old/sick)=", format(gList[gstar,2],digits=4),sep=""))
-      # }
+      print(paste(" beta_",t,"=", format(gList[gstar,],digits=4),sep=""))
     }else{
       sim0<-sim_j
       sim_0_augmented<-sim_j_augmented
@@ -357,10 +325,7 @@ gridSearch <- function(m, covid){
     parm<-gridPar(gList[gstar,], R0scale, t)
     if (t==1){
       par_star<-c(par_star, parm$I0, parm$beta)
-    # }else if (t<np){
-    #   par_star<-c(par_star, parm$beta0)
     }else{
-      # par_star<-c(par_star, parm$beta0, parm$beta1)
       par_star<-c(par_star, parm$beta)
     }
     
@@ -406,7 +371,7 @@ for (m in msaList){
   ### death data for this MSA
   covid<-COVID[COVID$msa==m,c("t","deathper100k","caseper100k")]
 
-  # ### there are two massive discrete jumps in NYC, we can make adjustment
+  # ### there are two massive discrete jumps in NYC, we can make adjustment to smooth out if we want
   # ### compute fraction jump, and apply it to death prior to the jump
   # if (m=="5600"){
   #   deaths0<-covid$deathper100k

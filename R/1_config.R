@@ -52,7 +52,9 @@ deathData <<- paste(dataPath,"covid_case_death_jh.csv",sep="/")
 seirParm  <<- file.path(parmPath,"seir_parameters.csv")
 
 # user input contact matrix file names start with
+# version with POI
 ctMatRaw <<- "contact_poi_msa"
+# version without POI
 # ctMatRaw <<- "contact_msa"
 
 # contact matrix file names start with
@@ -88,11 +90,12 @@ policyPOILetterCode <<- c("W", "S", "N", "B", "R", "P", "F", "E", "M")
 policyCaliEM <<- c("-E2-M1","-E2-M2","-E2-M3","-E2-M4")
 
 # all combinations of reopening policies including POI policies
+# the final entry is mask, we only run mask in phase I and mask in phase IV
 contactPolicyPOI<<-expand.grid(1:4,1:3,1:3,1:2,1:2,1:2,1:2,1:2,c(1,4))
 poiLevel <<- c("restaurants", "retail", "services", "entertainment")
 
 ### key policies considered (not specifying the mask)
-#NP, EO, CR, AS, WFH, 60+
+#NP, EO, CR, AS, WFH, 60+ (set of policies in NBER working paper)
 # reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2),
 #                      c(1,1,1,1,1,1,1,2),
 #                      c(4,3,1,2,2,2,2,2),
@@ -100,7 +103,7 @@ poiLevel <<- c("restaurants", "retail", "services", "entertainment")
 #                      c(2,3,1,2,2,2,2,2),
 #                      c(4,3,1,2,2,2,2,1))
 
-#NP, EO, CR, NR, AS, WFH, 60+
+#NP, EO, CR, NR, AS, WFH, 60+ (new set of policies, to be discussed)
 reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2),
                      c(1,1,1,1,1,1,1,2),
                      c(4,1,2,2,2,2,1,2),
@@ -110,16 +113,20 @@ reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2),
                      c(4,3,1,2,2,2,2,1))
 
 # generate results for multiple reference policies, 
-# this is for area plot
+# this is for area plot in the NBER working paper
 genRef4Area<<-0
 
-# do we run interaction of policies across all phases (=1) or keep first 3 phases as reference policies?
+# do we run interaction of 'reopenPolicy' across all phases (=1) 
+# or keep first 3 phases as the reference policy and run all possible reopen policies 'contactPolicyPOI' in the last phase (=0)?
 AllPhases<<-0
 
 
 ## MSAs
-# NYC, Chicago, Sacramento, Houston, Kansas City
+# NYC, Chicago, Sacramento, Kansas City
 msaList<<-c("5600","1600","6920","3760")
+msaList<<-c("1600")
+
+
 
 #####################################
 # key global variables
@@ -155,9 +162,9 @@ TNAUGHT <<- as.Date(unique("3/5/2020"), "%m/%d/%Y")
 verTag <<-"_combo"
 
 # save detailed seir compartment X type X time level results and plots for internal checking?
-outputSIR<<-0
+outputSIR<<-1
 
-# estimated or generic beta
+# use estimated or generic beta (default 0, 1 and 2 for the compare MSA exercise only)
 # 0: use MSA specific estimated parameter
 # 1: use MSA specific beta and generic initial condition
 # 2: use generic parameters

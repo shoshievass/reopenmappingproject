@@ -48,7 +48,7 @@ SEIIRRD_model=function(t, x, vparameters){
     #infected per active employed in healthcare
     # healthNeed <- as.vector( sum(Ihc) / sum((S+E+Ia+Ins+Rqd+Rnq) * healthVec))
     
-    # # transmission
+    # # transmission separately by types
     # betaV = beta0*(oldSickInd==0) + beta1*(oldSickInd==1)
     
     #transition
@@ -375,9 +375,7 @@ genPolicy <- function(refPolicy) {
   ## reference policies
   refp <- policyMatrix(refPolicy,np)
   
-  
-  
-  ## combinations of reference and different reopen policies in the last phase
+  ## reference policy, and all possible combinations of reopen policies in the last phase
   nr <- dim(contactPolicyPOI)[1]
   policyFull <- t(unname(rbind(matrix(rep(refPolicy[1:(np-1)],nr),(np-1),nr),policyTagString(contactPolicyPOI))))
   
@@ -388,7 +386,7 @@ genPolicy <- function(refPolicy) {
                                 policyTagString(cbind(reopenPolicy,3)),
                                 policyTagString(cbind(reopenPolicy,4)))), dim(reopenPolicy)[1]^np,np)
   
-  # ## all policy combo to run
+  # ## all policy combo to run (to be removed, keep for now just in case)
   # if (genRef4Area==1){
   #   # generate more reference policies for area plots
   #   policyCombo<<-rbind(refp,policyFull)
