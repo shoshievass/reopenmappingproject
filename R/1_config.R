@@ -88,7 +88,7 @@ policyPOILetterCode <<- c("W", "S", "N", "B", "R", "P", "F", "E", "M")
 policyCaliEM <<- c("-E2-M1","-E2-M2","-E2-M3","-E2-M4")
 
 # all combinations of reopening policies including POI policies
-contactPolicyPOI<<-expand.grid(1:4,1:3,1:3,1:2,1:2,1:2,1:2,1:2,1:4)
+contactPolicyPOI<<-expand.grid(1:4,1:3,1:3,1:2,1:2,1:2,1:2,1:2,c(1,4))
 poiLevel <<- c("restaurants", "retail", "services", "entertainment")
 
 ### key policies considered (not specifying the mask)
@@ -109,21 +109,17 @@ reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2),
                      c(2,1,1,1,2,1,1,2),
                      c(4,3,1,2,2,2,2,1))
 
-### all possible combo for reopen policy in the final phase
-# reopenPolicy<<-contactPolicyPOI
-
 # generate results for multiple reference policies, 
 # this is for area plot
 genRef4Area<<-0
 
 # do we run interaction of policies across all phases (=1) or keep first 3 phases as reference policies?
-AllPhases<<-1
+AllPhases<<-0
 
 
 ## MSAs
 # NYC, Chicago, Sacramento, Houston, Kansas City
-# msaList<<-c("5600","1600","6920","3760")
-msaList<<-c("5600")
+msaList<<-c("5600","1600","6920","3760")
 
 #####################################
 # key global variables
@@ -137,7 +133,8 @@ age60<<-6
 ageSchool<<-3
 
 ## age group names
-ageNames <<-c("5_15", "16-29", "30_39", "40_49", "50_59", "60_69", "70_79", "80")
+ageNames <<-c("5_15", "16_29", "30_39", "40_49", "50_59", "60_69", "70_79", "80")
+employNames <<-c("Unemploy", "CanNotWFH", "CanWFH")
 raceincomeNames <<-c("BlackLowInc", "BlackMidInc", "BlackHigInc",
                      "HispnLowInc", "HispnMidInc", "HispnHigInc",
                      "WhiteLowInc", "WhiteMidInc", "WhiteHigInc")
@@ -164,7 +161,7 @@ outputSIR<<-0
 # 0: use MSA specific estimated parameter
 # 1: use MSA specific beta and generic initial condition
 # 2: use generic parameters
-Generic<<-2
+Generic<<-0
 if (Generic>0){
   verTag <<-paste(verTag,'_par',Generic,sep="")
 }
@@ -192,17 +189,19 @@ EPSILON<<-PAR$epsilon
 TAU    <<-PAR$tau
 
 # rate at which Ia flow into hospital/icu
+# hospital/icu are  (hospital|symptomatic) and  (icu|symptomatic)
+# to compute flow from Ia we need to multiply by the prob of symptom (psi) and the rate (TAU)
 HOSPITAL <<-PAR$hospital * TAU * psi
 ICU      <<-PAR$hospital * TAU * psi
 
 # hospitalization/icu duration
-HOSPDAYS<<-10
-ICUDAYS<<-5
+HOSPDAYS<<-min(PAR$hospital_days)
+ICUDAYS <<-min(PAR$icu_days)
 
 
-#input mortality conditional on infected, transform into transition rate conditional on symptomatic
-mort     <-PAR$mort
-DELTAhc <<-mort*gammaD/psi     # death rate 
+# input mortality conditional on (hospita|symptomatic) from https://healthcare-in-europe.com/en/news/covid-19-high-mortality-in-hospital-patients.html
+# transform into (death|symptomatic) * rate (gammaD)
+DELTAhc <<-PAR$death_in_hosp * PAR$hospital * gammaD         # death rate 
 GAMMA   <<-gammaD - DELTAhc    # recovery rate to account for variation in death, so total transition rate out of infected is kept at gammaD
 
 ## unique age X sick type: age*10 + sick
@@ -228,5 +227,5 @@ naicsName<<-c("Healthcare*","Manufacturing*","Wholesale*","Retail","Finance","Pr
 gen_col()
 
 # clear variables
-rm(PAR, mort, gamma, gammaD, betaH, eta, psi)
+rm(PAR, gamma, gammaD, betaH, eta, psi)
 

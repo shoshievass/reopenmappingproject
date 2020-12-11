@@ -23,9 +23,7 @@ runSir <- function(place, policy, par, simRef){
     
     # load default parameters and set transmission rate
     vpar<-vparameters0
-    parm<-setBeta(contact, par, j) 
-    vpar["beta0"] <- parm$beta0
-    vpar["beta1"] <- parm$beta1
+    vpar["beta"] <- setBeta(contact, par) 
     
     ### initial condition
     inits<-initialCondition(TTT[j],sim0)
@@ -47,6 +45,7 @@ runSir <- function(place, policy, par, simRef){
     # check population static
     check<-rowSums(sim0[,c("S5","E5","Ia5","Ins5","Ihc5","Rq5","Rnq5","Rqd5","D5")])
     stopifnot(abs(min(check)-max(check))<0.1)
+    # stopifnot(min(min(sim0[,grep("S[0-9]"  ,coln, perl=T)]))<-1)
     
     # organize outputs across three phasess
     if (j==np){
@@ -90,7 +89,7 @@ for (m in msaList){
   initNumIperType<<-par$I0
   
   #policy combo
-  policyCombo<<-genPolicy(reopenPolicy, msaPD$refPolicy)
+  policyCombo<<-genPolicy(msaPD$refPolicy)
   
   # demo graphic accounting inputs
   Demo <- checkLoad(demoAcct) 
@@ -100,11 +99,21 @@ for (m in msaList){
   outcomesofinterest<-c("MSA", 
                       "BaselineAdjDeaths", "BaselineAdjCases", "BaselineAdjEmpDays", "BaselineAdjHospDays",  "BaselineAdjICUDays", 
                       "Deaths", "Case", "EmpDaysLost", "HospitalizationDays", "ICUDays", "Population")
-  df<-data.frame(matrix(ncol = np+length(outcomesofinterest)+length(ageNames)*2+length(raceincomeNames)*6, nrow = dim(policyCombo)[1], 
+  df<-data.frame(matrix(ncol = np+length(outcomesofinterest)
+                        +length(ageNames)*5+length(employNames)*5
+                        +length(raceincomeNames)*6, nrow = dim(policyCombo)[1], 
                         dimnames=list(NULL, 
                         c(paste("Policy",1:np, sep=""), outcomesofinterest,
-                          paste("Death", ageNames, sep=""),
-                          paste("Case" , ageNames, sep=""),
+                          paste("DeathRate",      ageNames, sep=""),
+                          paste("HospitalDays",   ageNames, sep=""),
+                          paste("ICUDays",        ageNames, sep=""),
+                          paste("AvgEmpDaysLost", ageNames, sep=""),
+                          paste("Prob",           ageNames, sep=""),
+                          paste("DeathRate",      employNames, sep=""),
+                          paste("HospitalDays",   employNames, sep=""),
+                          paste("ICUDays",        employNames, sep=""),
+                          paste("AvgEmpDaysLost", employNames, sep=""),
+                          paste("Prob",           employNames, sep=""),
                           paste("DeathRate",      raceincomeNames, sep=""),
                           paste("HospitalDays",   raceincomeNames, sep=""),
                           paste("ICUDays",        raceincomeNames, sep=""),

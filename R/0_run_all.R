@@ -41,8 +41,9 @@ source(getCodePath("4b_grid_search.R"))
 ## run SIR
 source(getCodePath("5_seir.R"))
 
+## other analysis:
 ## run SIR and compare MSAs
-source(getCodePath("5B_seir.R"))
+# source(getCodePath("5B_seir.R"))
 
 
 

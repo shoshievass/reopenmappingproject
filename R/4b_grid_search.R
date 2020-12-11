@@ -17,21 +17,21 @@ gridPar <- function(parm, R0scale, phase){
     if(I0<=0) stop("initial infected fraction needs to be >0!")
     
     #transmission rate
-    beta0<-parm[[2]]/R0scale
-    beta1<-beta0
-  }else if (phase<np){
-    I0<-initNumIperType
-    beta0<-parm[[1]]/R0scale
-    beta1<-beta0
+    beta<-parm[[2]]/R0scale
+    # beta1<-beta0
+  # }else if (phase<np){
+  #   I0<-initNumIperType
+  #   beta<-parm[[1]]/R0scale
+  #   beta1<-beta0
   }else{
     I0<-initNumIperType
-    beta0<-parm[[1]]/R0scale
+    beta<-parm[[1]]/R0scale
     # beta1<-parm[[2]]/R0scale 
-    beta1<-beta0
+    # beta1<-beta0
   }
 
-  if(min(beta0,beta1)<0) stop("transmission rate needs to be >=0!")
-  return(list(beta0=beta0,beta1=beta1,I0=I0))
+  if(min(beta)<0) stop("transmission rate needs to be >=0!")
+  return(list(beta=beta,I0=I0))
 }
 
 ### set up grid points
@@ -75,14 +75,13 @@ runSEIR <- function(g, R0scale, phase, t, CmatList, TTTcali, sim0){
   initNumIperType<<-parm$I0
   
   inits<-initialCondition(TTTcali[t],sim0)
-  vt <- seq(0,diff(TTTcali)[t],1) 
+  vt   <-seq(0,diff(TTTcali)[t],1) 
   
   # set contact matrix and parameter in each period
   Cmat<<-CmatList[[t]]
   
   vpar <- vparameters0
-  vpar["beta0"] <- parm$beta0
-  vpar["beta1"] <- parm$beta1
+  vpar["beta"] <- parm$beta
   
   # RUN SIR
   sim_j = as.data.frame(lsoda(inits, vt, SEIIRRD_model, vpar))
@@ -239,7 +238,7 @@ gridSearch <- function(m, covid){
   sim0_augmented<-NA
   for (t in 1:np){
     ### range of time in this phase
-    if (m=="5600" & t==2){
+    if (m=="5600" & t<4){
       ### in NYC, the second phase is very long, so we use phase 2-4 to estimate parameters during 2
       ttt <- c(TTTcali[t]:TTTcali[t+3])+1
     }else{
@@ -270,10 +269,10 @@ gridSearch <- function(m, covid){
       fitDeath<-matrix(0,ng,max(ttt))
       fitCase <-matrix(0,ng,max(ttt))
       
-      ### for each parameter 
+      ### for each grid point
       for (i in 1:ng){
         sim_0_tt<-sim0
-        for (tt in t:ifelse((m=="5600" & t==2), t+2,t+1)){
+        for (tt in t:ifelse((m=="5600" & t<4), t+2, t+1)){
           sim_j <- runSEIR(gList[i,], R0scale, t, tt, CmatList, TTTcali, sim_0_tt)
           if (tt>1){
             sim_j<-rbind(sim_0_tt[1:TTTcali[tt],], sim_j)
@@ -357,12 +356,12 @@ gridSearch <- function(m, covid){
     ## collect calibrated parameter (after transformation)
     parm<-gridPar(gList[gstar,], R0scale, t)
     if (t==1){
-      par_star<-c(par_star, parm$I0, parm$beta0)
+      par_star<-c(par_star, parm$I0, parm$beta)
     # }else if (t<np){
     #   par_star<-c(par_star, parm$beta0)
     }else{
       # par_star<-c(par_star, parm$beta0, parm$beta1)
-      par_star<-c(par_star, parm$beta0)
+      par_star<-c(par_star, parm$beta)
     }
     
     end_time <- Sys.time()
@@ -381,19 +380,12 @@ gridSearch <- function(m, covid){
   colnames(parmOut)<-c("I0",paste("beta",1:(dim(step)[2]-1),sep=""))
   checkWrite(file.path(calibratedParPath, paste(caliParm, m, ".csv", sep="")),
              parmOut, "calibrated parameters")
-  
-  modelOut <- calOutcome(sim_0_augmented)
-  colnames(modelOut)<-c("Deaths", "Case", "EmpDaysLost", "HospitalizationDays", "ICUDays", "Population",
-                        paste("Death", ageNames, sep=""),
-                        paste("Case", ageNames, sep=""))
-  checkWrite(file.path(calibratedParPath, paste(caliParm, m, "_keyOutputs.csv", sep="")),
-             modelOut, "key SEIR outputs at calibrated parameters")  
-  
+
   ### plot calibration result
   fn <- file.path(outPath, "figure", paste("calibrate_beta_I0_death_msa", m, ".pdf", sep=""))
   plotCali(fn, dead, deadfit, 0, tVertL)
   print(paste("  saved plot:",fn))
-  
+
   fn <- file.path(outPath, "figure", paste("calibrate_beta_I0_case_msa", m, ".pdf", sep=""))
   plotCali(fn, log(case), log(casefit), 1, tVertL)
   print(paste("  saved plot:",fn))
@@ -413,7 +405,7 @@ for (m in msaList){
   
   ### death data for this MSA
   covid<-COVID[COVID$msa==m,c("t","deathper100k","caseper100k")]
-  
+
   # ### there are two massive discrete jumps in NYC, we can make adjustment
   # ### compute fraction jump, and apply it to death prior to the jump
   # if (m=="5600"){
@@ -422,10 +414,15 @@ for (m in msaList){
   #   max_jump<-max(diff(deaths))
   #   while (max_jump>8){
   #     # time of jump
-  #     t_max <-which.max(diff(deaths))
+  #     t <-which.max(diff(deaths))
   #     # compute pct jump and apply to deaths series before jumps
-  #     jump_pct <- diff(deaths)[t_max]/deaths[t_max-1]
-  #     deaths[1:t_max]<-deaths[1:t_max]*(1+jump_pct)
+  #     jump_pct0 <- diff(deaths)[t]/deaths[t]
+  #     jump_pct1 <- diff(deaths)[t]/deaths[t+1]
+  # 
+  #     h<-14
+  #     scl<-1/(1+exp(seq(-h,h,1)/5))
+  #     deaths[(t-h):(t+h)]<-c(deaths[(t-h):(t)],              deaths[(t+1):(t+h)]*(1-jump_pct1)) * scl +
+  #                          c(deaths[(t-h):(t)]*(1+jump_pct0),deaths[(t+1):(t+h)]              ) * (1-scl)
   #     max_jump<-max(diff(deaths))
   #   }
   #   plot(1:dim(covid)[1], deaths0, type="l")

@@ -14,7 +14,6 @@
 runSir <- function(placeCnt, placePop, policy, par, simRef){
   #number of phases
   np<-length(policy)
-  
   sim0<-NA
   
   # for each phase
@@ -28,12 +27,12 @@ runSir <- function(placeCnt, placePop, policy, par, simRef){
     
     ## load contact
     CDataCnt <-loadContactData(placeCnt,contact)
-
+    
     types<-CDataCnt$types[,(colnames(CDataCnt$types) %in% c("n"))==FALSE]
     
     ## merge, keep all types in the contact matrix
     types <- merge(types, CDataPop$types, by=c("naics","age","sick","wfh","shift","work_poi","active_emp"),all.x = TRUE) 
-   
+    
     ## revert to original order, keep only merged types
     types <- types[order(types$ego.x), ]
     valid_types <- is.na(types$n)==FALSE
@@ -49,7 +48,7 @@ runSir <- function(placeCnt, placePop, policy, par, simRef){
     
     # load default parameters and set transmission rate
     vpar<-vparameters0
-    vpar["beta"]<-setBeta(contact, par, j) 
+    vpar["beta"]<-setBeta(contact, par) 
     
     ### initial condition
     inits<-initialCondition(TTT[j],sim0)
@@ -81,7 +80,8 @@ runSir <- function(placeCnt, placePop, policy, par, simRef){
         if (i==4){
           ### number of people in hospital, assuming each inpatient stay for 10 days
           hosp <- cumsum(var[i,])
-          var[i,] <- c(hosp[1:10], hosp[11:length(hosp)]-hosp[1:(length(hosp)-10)])
+          var[i,] <- c(hosp[1:HOSPDAYS], 
+                       hosp[(HOSPDAYS+1):length(hosp)]-hosp[1:(length(hosp)-HOSPDAYS)])
         }
       }
     }
@@ -95,17 +95,17 @@ plotSIR2MSA <- function(fn, var, small, legendMSA) {
   
   # state to plot
   name2plot<-c("Deaths","Cases","EmpLoss","Hospital")
-  
+  legendpos<-c("bottomright", "bottomright", "topright", "topright")
   # different y axis range, depending on MSAs and run version
   colvec <-c(6,6,6,6)
   colvec2<-c(4,4,4,4)
   if (Generic==2){
-    yub<-c(0.9,70,40,1)
+    yub<-c(1,80,60,1.2)
   }else{
     if (small==1){
-      yub<-c(0.001,0.2,0.1,0.002)
+      yub<-c(0.06,20,10,0.1)
     }else{
-      yub<-c(0.8,60,30,0.8)    
+      yub<-c(0.8,70,50,0.8)    
     }    
   }
   l<-length(colvec)
@@ -127,7 +127,7 @@ plotSIR2MSA <- function(fn, var, small, legendMSA) {
     lines(0:max(TTT),var[l*3+i,],
           type="l",lty=1,lwd=2,col=mycol[colvec2[i]])
     
-    legend("topleft",
+    legend(legendpos[i],
            legend=legendMSA,
            col=c(color,color,color2,color2),
            lty=c(1,2,5,1), 
@@ -153,25 +153,49 @@ np <- length(grep("Scenario",colnames(P),perl=T))
 
 
 # we need to run all 4 MSAs together, in the following order
-msaListCntct<<-c("5600","1600","5600","1600",
-                 "6920","3760","6920","3760")
-msaListCmpst<<-c("5600","5600","1600","1600",
-                 "6920","6920","3760","3760")
+if (Generic<2){
+  msaListCntct<<-c("5600","1600","5600","1600",
+                   "6920","3760","6920","3760")
+  msaListCmpst<<-c("5600","5600","1600","1600",
+                   "6920","6920","3760","3760")
+}else{
+  msaListCntct<<-c("5600","1600","5600","1600",
+                   "6920","3760","6920","3760",
+                   "5600","3760","5600","3760",
+                   "1600","3760","1600","3760",
+                   "5600","6920","5600","6920")
+  msaListCmpst<<-c("5600","5600","1600","1600",
+                   "6920","6920","3760","3760",
+                   "5600","5600","3760","3760",
+                   "1600","1600","3760","3760",
+                   "5600","5600","6920","6920")
+}
 
-# msaListCntct<<-c("5600","1600","5600","1600",
-#                  "6920","3760","6920","3760",
-#                  "5600","3760","5600","3760",
-#                  "1600","3760","1600","3760")
-# msaListCmpst<<-c("5600","5600","1600","1600",
-#                  "6920","6920","3760","3760",
-#                  "5600","5600","3760","3760",
-#                  "1600","1600","3760","3760")
+# #NP throughout but change in beta
+# policy<-c("_W4-S3-N3-B2-R2-P2-F2-E2-M1", 
+#           "_W4-S3-N3-B2-R2-P2-F2-E2-M2", 
+#           "_W4-S3-N3-B2-R2-P2-F2-E2-M3", 
+#           "_W4-S3-N3-B2-R2-P2-F2-E2-M4")
 
+## WFH
+# policy<-c("_W4-S3-N3-B2-R2-P2-F2-E2-M1", 
+#           "_W2-S1-N1-B1-R2-P1-F1-E2-M2", 
+#           "_W2-S1-N1-B1-R2-P1-F1-E2-M3", 
+#           "_W2-S1-N1-B1-R2-P1-F1-E2-M4")
 
-#NP throughout
-nopolicy <- "_W4-S3-N3-B2-R2-P2-F2-E2-M1"
-policy<-rep(nopolicy, 4)
+## AS
+# policy<-c("_W4-S3-N3-B2-R2-P2-F2-E2-M1", 
+#           "_W3-S2-N1-B2-R2-P2-F2-E2-M2", 
+#           "_W3-S2-N1-B2-R2-P2-F2-E2-M3", 
+#           "_W3-S2-N1-B2-R2-P2-F2-E2-M4")
 
+## 60+
+policy<-c("_W4-S3-N3-B2-R2-P2-F2-E2-M1", 
+          "_W4-S3-N1-B2-R2-P2-F2-E1-M2", 
+          "_W4-S3-N1-B2-R2-P2-F2-E1-M3", 
+          "_W4-S3-N1-B2-R2-P2-F2-E1-M4")
+
+verTag <- paste(verTag, "60", sep="_")
 
 
 #### foreach MSA
@@ -179,7 +203,7 @@ m_num<-1
 var_agg<-c()
 for (m in msaListCntct){
   # load calibrated parameters for this location
-  par<-calibratedPar(m, Generic)
+  par   <-calibratedPar(m, Generic)
   
   ### msa policy and date
   msaPD <- loadPolicyDates(m)
@@ -218,6 +242,10 @@ for (m in msaListCntct){
       legendMSA <- c("Chicago Contact - Chicago Population", "Kansas City Contact - Chicago Population",
                      "Chicago Contact - Kansas City Population", "Kansas City Contact - Kansas City Population")
       small<-0
+    }else if (m_num<=20){
+      legendMSA <- c("NYC Contact - NYC Population", "Sacramento Contact - NYC Population",
+                     "NYC Contact - Sacramento Population", "Sacramento Contact - Sacramento Population")
+      small<-0
     }else{
       stop("not coded up figure format")
     }
@@ -233,7 +261,7 @@ for (m in msaListCntct){
   m_num<-m_num+1
   
 }
-# rm(Cmat, par)
+rm(Cmat, par)
 
 
 

@@ -46,13 +46,14 @@ SEIIRRD_model=function(t, x, vparameters){
     epsilonV = EPSILON[ageSickVec]
     
     #infected per active employed in healthcare
-    healthNeed <- as.vector( sum(Ihc) / sum((S+E+Ia+Ins+Rqd+Rnq) * healthVec))
+    # healthNeed <- as.vector( sum(Ihc) / sum((S+E+Ia+Ins+Rqd+Rnq) * healthVec))
     
     # # transmission
-    betaV = beta0*(oldSickInd==0) + beta1*(oldSickInd==1)
+    # betaV = beta0*(oldSickInd==0) + beta1*(oldSickInd==1)
     
     #transition
-    dS   = -as.matrix(S)*betaV*(as.matrix(Cmat)%*%as.matrix((Ia+Ins)/N)) - as.matrix(S*betaH)*healthNeed*healthVec
+    # dS   = -as.matrix(S)*betaV*(as.matrix(Cmat)%*%as.matrix((Ia+Ins)/N)) - as.matrix(S*betaH)*healthNeed*healthVec
+    dS   = -as.matrix(S)*beta*(as.matrix(Cmat)%*%as.matrix((Ia+Ins)/N)) 
     dE   = -epsilonV*as.matrix(E) -dS 
     dIa  = +epsilonV*as.matrix(E) -tauV*as.matrix(Ia)                              
     dIns =                        +tauV*as.matrix(Ia)*(1-psi) -gamma*as.matrix(Ins)  
@@ -137,7 +138,6 @@ calibratedPar <- function(place, generic=0) {
     beta2<-as.vector(min(pData$beta2))
     beta3<-as.vector(min(pData$beta3))
     beta4<-as.vector(min(pData$beta4))
-    # beta5<-as.vector(min(pData$beta5))
   }
 
   
@@ -154,8 +154,7 @@ calibratedPar <- function(place, generic=0) {
       beta1<-as.vector(min(pData$beta1))
       beta2<-as.vector(min(pData$beta2))
       beta3<-as.vector(min(pData$beta3))
-      beta4<-as.vector(min(pData$beta4))
-      # beta5<-as.vector(min(pData$beta5))     
+      beta4<-as.vector(min(pData$beta4))    
     }
 
   }
@@ -365,7 +364,7 @@ policyMatrix <- function(refPolicy,np){
 
 
 # enumerate all policies to plot, including references  -------------------------------------
-genPolicy <- function(reopenPolicy,refPolicy) {
+genPolicy <- function(refPolicy) {
   
   ## number of phases
   np <-length(refPolicy)
@@ -376,20 +375,18 @@ genPolicy <- function(reopenPolicy,refPolicy) {
   ## reference policies
   refp <- policyMatrix(refPolicy,np)
   
-  ## different reopen policies
-  reopenPolicy4<-cbind(reopenPolicy,4)
-  policyList <<- policyTagString(reopenPolicy4)
-  nr <- length(policyList)
+  
   
   ## combinations of reference and different reopen policies in the last phase
-  policyFull <- t(unname(rbind(matrix(rep(refPolicy[1:(np-1)],nr),(np-1),nr),policyList)))
+  nr <- dim(contactPolicyPOI)[1]
+  policyFull <- t(unname(rbind(matrix(rep(refPolicy[1:(np-1)],nr),(np-1),nr),policyTagString(contactPolicyPOI))))
   
   ## all interactions of policies with mask at each stage
   policyInteract <- matrix(unlist(expand.grid(
                                 policyTagString(cbind(reopenPolicy,1)),
                                 policyTagString(cbind(reopenPolicy,2)),
                                 policyTagString(cbind(reopenPolicy,3)),
-                                policyList)), dim(reopenPolicy)[1]^np,np)
+                                policyTagString(cbind(reopenPolicy,4)))), dim(reopenPolicy)[1]^np,np)
   
   # ## all policy combo to run
   # if (genRef4Area==1){
@@ -411,21 +408,14 @@ genPolicy <- function(reopenPolicy,refPolicy) {
 
 
 # set transmission rate  -------------------------------------
-setBeta <- function(contact, par, j) {
+setBeta <- function(contact, par) {
   #policy assumption on transmission rate
   beta_i <- parsePolicyTag(contact, "M")
   
   #transmission rate of the specific phase
-  beta0<-par[[paste("beta",beta_i,sep="")]]
+  beta<-par[[paste("beta",beta_i,sep="")]]
   
-  #if we are in the last phase, one more parameter
-  beta1<-beta0
-  # if (beta_i<4){
-  #   beta1<-beta0
-  # }else{
-  #   beta1<-par[[paste("beta",beta_i+1,sep="")]]
-  # }
-  return(list(beta0=beta0,beta1=beta1))
+  return(beta)
 }
 
 
@@ -508,7 +498,7 @@ calOutcome<-function(simRun, Demo){
   print(paste("Deaths:", round(sum(deaths))))
   
   cases <-max(extractSeveralState(c("Ihc","Rq","Rqd","D"),simRun)*scal)
-  print(paste("Cases:", round(cases)))
+  # print(paste("Cases:", round(cases)))
   
   #2. count employment less
   ## includes compartment that are working
@@ -527,29 +517,18 @@ calOutcome<-function(simRun, Demo){
   #3. hospitalization/icu days
   hosp <- simRun[,pickState("hospital",coln)]*HOSPDAYS
   icu  <- simRun[,pickState("icu"     ,coln)]*ICUDAYS
-  print(paste("Hospitalization (1000days):", 
-              round(sum(hosp)/1e3))) 
-  print(paste("ICU (1000days):", 
-              round(sum(icu)/1e3))) 
+  # print(paste("Hospitalization (1000days):", 
+  #             round(sum(hosp)/1e3))) 
+  # print(paste("ICU (1000days):", 
+  #             round(sum(icu)/1e3))) 
+  # 
   
-  
-  if (is.na(Demo)){
+  if (min(is.na(Demo))==1){
     ## stack short outputs
     out <- c(sum(deaths), cases, sum(empLoss), sum(hosp), sum(icu), sum(types$n))  
  
   }else{ 
-    #4. death/cases by age
-    print("Deaths in each age group")
-    deathByAge <- extractFinalByAge("D",simRun)
-    print(deathByAge)
-    
-    print("Cases in each age group")
-    caseByAge <- extractFinalByAge("Ihc", simRun) + 
-      extractFinalByAge("Rq" , simRun) +
-      extractFinalByAge("Rqd", simRun) + deathByAge
-    print(caseByAge)
-    
-    #5. demographic accounting
+    #4. demographic accounting
     demo_acct <- types
     
     ### death rate and average employment loss
@@ -559,6 +538,27 @@ calOutcome<-function(simRun, Demo){
     demo_acct$icu      <- colSums(icu) /types$n
     demo_acct$employed <- 1*(demo_acct$naics>0)
     
+    ## outcome by age
+    age <- demo_acct %>% 
+      group_by(age) %>% 
+      summarise(death = sum(death*n)/sum(n), 
+                hosp  = sum(hosp*n)/sum(n), 
+                icu   = sum(icu*n)/sum(n), 
+                empLoss = sum(empLoss*n)/sum(n),
+                n = sum(n)) 
+    age$pr_age = age$n*100/sum(age$n)
+    
+    ## outcome by wfh and employed
+    employment <- demo_acct %>% 
+      group_by(employed,wfh) %>% 
+      summarise(death = sum(death*n)/sum(n), 
+                hosp  = sum(hosp*n)/sum(n), 
+                icu   = sum(icu*n)/sum(n), 
+                empLoss = sum(empLoss*n)/sum(n),
+                n = sum(n)) 
+    employment$pr_employment = employment$n*100/sum(employment$n)
+    
+    ## accounting for race and income
     ## first average outcomes across types we want to keep track
     demo_acct <- demo_acct %>% 
       group_by(age, naics, sick, wfh, employed) %>% 
@@ -575,7 +575,7 @@ calOutcome<-function(simRun, Demo){
     
     ## accounting for race/income based outcome
     # pr_type_ineq = prob ( age, naics, sick, wfh | race income region)
-    demo_acct <- demo_acct %>% 
+    race_income <- demo_acct %>% 
       group_by(race, income) %>% 
       summarise(totalW    = sum(pr_type_ineq), 
                 death     = sum(pr_type_ineq * death)  /sum(pr_type_ineq),
@@ -584,14 +584,15 @@ calOutcome<-function(simRun, Demo){
                 empLoss   = sum(pr_type_ineq * empLoss * employed)/sum(pr_type_ineq * employed),
                 age       = sum(pr_type_ineq * raw_age)/sum(pr_type_ineq),
                 essential = sum(pr_type_ineq * essential)/sum(pr_type_ineq),
-                N = sum(N))
-    demo_acct$pr_race_income <- demo_acct$N*100/sum(demo_acct$N)  
+                n = sum(n))
+    race_income$pr_race_income <- race_income$n*100/sum(race_income$n)  
     
     ## stack outputs
     out <- c(sum(deaths), cases, sum(empLoss), sum(hosp), sum(icu), sum(types$n), 
-             deathByAge, caseByAge, 
-             demo_acct$death, demo_acct$hosp, demo_acct$icu, demo_acct$empLoss, 
-             demo_acct$age, demo_acct$pr_race_income)
+             age$death, age$hosp, age$icu, age$empLoss, age$pr_age, 
+             employment$death, employment$hosp, employment$icu, employment$empLoss, employment$pr_employment, 
+             race_income$death, race_income$hosp, race_income$icu, race_income$empLoss, 
+             race_income$age, race_income$pr_race_income)
   }
   return(matrix(out,1,length(out)))
 }

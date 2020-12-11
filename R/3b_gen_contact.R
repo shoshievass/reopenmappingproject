@@ -200,28 +200,28 @@ for (m in msaList){
   #   this is based on demo accounting with race and income also
   ##################################################################### 
   
-  # # get distribution of focal individuals i across age, naics, and imposed WFH and comorb
-  # Cdemo <- C[,c(paste(typeVec,"i",sep="_"),"essential_i","num_people")] %>% distinct() %>%
-  #   group_by(age_i, naics_i, sick_i, wfh_i, essential_i) %>%
-  #   summarise(num_people=sum(num_people)) %>%
-  #   rename(age = age_i, naics = naics_i, sick = sick_i, wfh = wfh_i,essential = essential_i)
-  # 
-  # # demo graphic accounting inputs
-  # Demo <- checkLoad(demoAcct)
-  # Demo <- Demo[Demo$msa==m,] %>%
-  #   group_by(age, naics, sick, wfh, race, income) %>%
-  #   summarise(N = sum(N)) %>%
-  #   group_by(age, naics, sick, wfh) %>%
-  #   mutate(prob_age_income = N/sum(N))
-  # 
-  # # merge contract matrix population composition, with additional conditional prob for race and income
-  # Cdemo <- merge(Cdemo, Demo, by=c("age","naics","sick","wfh"), all = FALSE) %>%
-  #   mutate(num_people = num_people * prob_age_income)
-  # 
-  # # export demographic composition
-  # checkWrite(file.path(outPath,
-  #                      paste("Demo_msa", m, ".csv", sep="")),
-  #            Cdemo, "aggregate demographics")
+  # get distribution of focal individuals i across age, naics, and imposed WFH and comorb
+  Cdemo <- C[,c(paste(typeVec,"i",sep="_"),"essential_i","num_people")] %>% distinct() %>%
+    group_by(age_i, naics_i, sick_i, wfh_i, essential_i) %>%
+    summarise(num_people=sum(num_people)) %>%
+    rename(age = age_i, naics = naics_i, sick = sick_i, wfh = wfh_i,essential = essential_i)
+
+  # demo graphic accounting inputs
+  Demo <- checkLoad(demoAcct)
+  Demo <- Demo[Demo$msa==m,] %>%
+    group_by(age, naics, sick, wfh, race, income) %>%
+    summarise(N = sum(N)) %>%
+    group_by(age, naics, sick, wfh) %>%
+    mutate(prob_age_income = N/sum(N))
+
+  # merge contract matrix population composition, with additional conditional prob for race and income
+  Cdemo <- merge(Cdemo, Demo, by=c("age","naics","sick","wfh"), all = FALSE) %>%
+    mutate(num_people = num_people * prob_age_income)
+
+  # export demographic composition
+  checkWrite(file.path(outPath,
+                       paste("Demo_msa", m, ".csv", sep="")),
+             Cdemo, "aggregate demographics")
 
   #####################################
   ### policy definition
