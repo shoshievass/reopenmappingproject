@@ -56,8 +56,6 @@ runSir <- function(place, policy, par){
 start_time <- Sys.time()
 
 
-
-
 ###################################
 ## HY: stuff we want to switch
 ### different work policies
@@ -66,7 +64,6 @@ work<-c(0,1,2)
 
 ## number of periods and number of days in between policies
 nb<-8
-
 ndays<-14
 
 ## number of week in tottal
@@ -83,25 +80,30 @@ policyCombo<-policies[apply(t(diff(t(policies))), 1, FUN=min) ==0,]
 policyCombo <- rbind(policyCombo[1,], policyCombo[policyCombo[,1]>0,])
 
 ## the rest of policies
-# W(work), 
 # S(school), N(neighbor), POI-resturants, POI-retail, POI-personal service, POI-entertainment, (E)eldery, mask=1
-# HY: always set mask to 1, we can test different policies for school, etc and see what frontier looks like
-# note due to large file size of contact matrices, I only commited S=1 or 3, N=2 and E=2
-# so the possible non-work policies to explore are c({1,3},2,{1,2},{1,2},{1,2},{1,2},2,1)
-# work policies has 1 (essential only), 2 (wfh), 3 (alternating schedule), 4(full reopen)
-policyNonWork<-c(1,3,
-                 2,2,2,2,
-                 2,1)
+# policyNonWorkList<-rbind(c(1,3,2,2,2,2,2,1),
+#                          c(1,3,1,2,2,1,2,1),
+#                          c(1,3,1,1,1,1,2,1),
+#                          c(1,2,2,2,2,2,2,1),
+#                          c(1,2,1,2,2,1,2,1),
+#                          c(1,2,1,1,1,1,2,1),
+#                          c(1,1,2,2,2,2,2,1),
+#                          c(1,1,1,2,2,1,2,1),
+#                          c(1,1,1,1,1,1,2,1))
 
+## keep school closed
+## high neighboor contact and open POI
+## low neighboor contact and close POI
 policyNonWorkList<-rbind(c(1,3,2,2,2,2,2,1),
-                         c(1,3,1,2,2,1,2,1),
-                         c(1,3,1,1,1,1,2,1),
-                         c(1,2,2,2,2,2,2,1),
-                         c(1,2,1,2,2,1,2,1),
-                         c(1,2,1,1,1,1,2,1),
-                         c(1,1,2,2,2,2,2,1),
-                         c(1,1,1,2,2,1,2,1),
                          c(1,1,1,1,1,1,2,1))
+
+
+
+## use generic parameters
+Generic<<-2
+
+## baseline (0) or low contact (1)
+contactVer <-0
 
 ###################################
 aggSimOutcome<-c()
@@ -114,6 +116,13 @@ for (j in 1:dim(policyNonWorkList)[1]){
   for (m in msaList){
     # load calibrated parameters for this location
     par<-calibratedPar(m, Generic)
+    
+    if (contactVer==1){
+      par$I0<-1e-8
+      contactTag <- "_lowI0"
+    }else{
+      contactTag <- ""
+    }
       
     ### msa policy and date
     msaPD <- loadPolicyDates(m)
@@ -195,7 +204,7 @@ for (j in 1:dim(policyNonWorkList)[1]){
     msa<-aggOut[,1]
     
     # flip sign so higher number is more life/employment relative to first policy 
-    aggOut[,c(2,3)]<--aggOut[,c(2,3)]+1
+    aggOut[,c(2,3)]<- -aggOut[,c(2,3)]+1
     plot( aggOut[,2], aggOut[,3], type="l", col="white",
           ylab=paste("Life saved relative to ",Nweek,"-week no policy",sep=""),
           xlab=paste("Employment saved relative to ",Nweek,"-week no policy",sep=""))
@@ -219,12 +228,11 @@ for (j in 1:dim(policyNonWorkList)[1]){
   
   ### plot fontier
   par(mfrow=c(1,2))
-  # plotFrontier("", aggOut, 1) 
   plotFrontier("", aggOut) 
   
   
   # ## plot and save fontier
-  fname <- paste("np",nb,"_ndays",ndays,"_lowI0_school",
+  fname <- paste("np",nb,"_ndays",ndays,contactTag,"_school",
                  policyNonWork[1],"_neighbor",policyNonWork[2],
                  "_poi",policyNonWork[3],policyNonWork[4],policyNonWork[5],policyNonWork[6],sep="")
   # plotFrontier(paste("frontier_smooth_",fname,".png",sep=""), aggOut, 1)
@@ -239,6 +247,6 @@ colnames(aggSimOutcome)<-c("msa",
                            paste("W_t",seq(1,nb),sep=""))
 
 fn <- file.path(outPath, "csv", 
-                paste("frontier_np",nb,"_ndays",ndays,"_lowI0.csv", sep=""))
+                paste("frontier_np",nb,"_ndays",ndays,contactTag,".csv", sep=""))
 checkWrite(fn, aggSimOutcome, "SIR outputs") 
 

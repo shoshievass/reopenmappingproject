@@ -73,7 +73,8 @@ runSir <- function(placeCnt, placePop, policy, par, simRef){
     
     # output compartments to plot
     if (j==np){
-      what2plot<-list(D=c("D"),C=c("Ihc","Rq","Rqd","D"),Emp=c("Ihc","Rq","D"), Ia=c("hospital"))
+      # what2plot<-list(D=c("D"),C=c("Ihc","Rq","Rqd","D"),Emp=c("Ihc","Rq","D"), Ia=c("hospital"))
+      what2plot<-list(D=c("D"))
       var <-matrix(0, length(what2plot), max(TTT)+1)
       for (i in 1:length(what2plot)){
         var[i,] <- extractSeveralState(what2plot[[i]],sim0)
@@ -94,11 +95,18 @@ runSir <- function(placeCnt, placePop, policy, par, simRef){
 plotSIR2MSA <- function(fn, var, small, legendMSA) {
   
   # state to plot
-  name2plot<-c("Deaths","Cases","EmpLoss","Hospital")
-  legendpos<-c("bottomright", "bottomright", "topright", "topright")
+  # name2plot<-c("Deaths","Cases","EmpLoss","Hospital")
+  # legendpos<-c("bottomright", "bottomright", "topright", "topright")
+  
+  name2plot<-c("Deaths")
+  legendpos<-c("bottomright")
+  
+  
   # different y axis range, depending on MSAs and run version
   colvec <-c(6,6,6,6)
-  colvec2<-c(4,4,4,4)
+  colvec2<-c(2,2,2,2)
+  
+  
   if (Generic==2){
     yub<-c(1,80,60,1.2)
   }else{
@@ -108,18 +116,20 @@ plotSIR2MSA <- function(fn, var, small, legendMSA) {
       yub<-c(0.8,70,50,0.8)    
     }    
   }
-  l<-length(colvec)
+  l<-length(name2plot)
   
   for (i in 1:l){
     
     if (fn!="")  fn1 <- file.path(outPath, "figure", paste(name2plot[i], fn, sep=""))
-    if (fn!="")  png(fn1)
+    if (fn!="")  pdf(fn1, family="Palatino")
+    par(mar=c(2,5,1,1))
+    
     color  <- mycol[colvec[i]]
     color2 <- mycol[colvec2[i]]
 
     ### plot two regions
     plot(0:max(TTT),var[i,]
-         ,type="l",ylab="Percent of population",xlab="",ylim=c(0,yub[i]),lwd=2,col=color)
+         ,type="l",ylab="Percent of population",xlab="",ylim=c(0,yub[i]),lwd=2,col=color,cex.lab=psize, cex.axis=0.7*psize)
     lines(0:max(TTT),var[l+i,],
           type="l",lty=2,lwd=2,col=mycol[colvec[i]])
     lines(0:max(TTT),var[l*2+i,],
@@ -131,7 +141,7 @@ plotSIR2MSA <- function(fn, var, small, legendMSA) {
            legend=legendMSA,
            col=c(color,color,color2,color2),
            lty=c(1,2,5,1), 
-           horiz=F,lwd=1.3,bty="n",cex=1)
+           horiz=F,lwd=2, bty="n",cex=0.6*psize)
     
     if (fn!=""){
       dev.off()
@@ -159,23 +169,27 @@ if (Generic<2){
   msaListCmpst<<-c("5600","5600","1600","1600",
                    "6920","6920","3760","3760")
 }else{
+  # msaListCntct<<-c("5600","1600","5600","1600",
+  #                  "6920","3760","6920","3760",
+  #                  "5600","3760","5600","3760",
+  #                  "1600","3760","1600","3760",
+  #                  "5600","6920","5600","6920")
+  # msaListCmpst<<-c("5600","5600","1600","1600",
+  #                  "6920","6920","3760","3760",
+  #                  "5600","5600","3760","3760",
+  #                  "1600","1600","3760","3760",
+  #                  "5600","5600","6920","6920")
   msaListCntct<<-c("5600","1600","5600","1600",
-                   "6920","3760","6920","3760",
-                   "5600","3760","5600","3760",
-                   "1600","3760","1600","3760",
-                   "5600","6920","5600","6920")
+                   "6920","3760","6920","3760")
   msaListCmpst<<-c("5600","5600","1600","1600",
-                   "6920","6920","3760","3760",
-                   "5600","5600","3760","3760",
-                   "1600","1600","3760","3760",
-                   "5600","5600","6920","6920")
+                   "6920","6920","3760","3760")
 }
 
-# #NP throughout but change in beta
-# policy<-c("_W4-S3-N3-B2-R2-P2-F2-E2-M1", 
-#           "_W4-S3-N3-B2-R2-P2-F2-E2-M2", 
-#           "_W4-S3-N3-B2-R2-P2-F2-E2-M3", 
-#           "_W4-S3-N3-B2-R2-P2-F2-E2-M4")
+#NP throughout but change in beta
+policy<-c("_W4-S3-N3-B2-R2-P2-F2-E2-M1",
+          "_W4-S3-N3-B2-R2-P2-F2-E2-M2",
+          "_W4-S3-N3-B2-R2-P2-F2-E2-M3",
+          "_W4-S3-N3-B2-R2-P2-F2-E2-M4")
 
 ## WFH
 # policy<-c("_W4-S3-N3-B2-R2-P2-F2-E2-M1", 
@@ -190,12 +204,12 @@ if (Generic<2){
 #           "_W3-S2-N1-B2-R2-P2-F2-E2-M4")
 
 ## 60+
-policy<-c("_W4-S3-N3-B2-R2-P2-F2-E2-M1", 
-          "_W4-S3-N1-B2-R2-P2-F2-E1-M2", 
-          "_W4-S3-N1-B2-R2-P2-F2-E1-M3", 
-          "_W4-S3-N1-B2-R2-P2-F2-E1-M4")
+# policy<-c("_W4-S3-N3-B2-R2-P2-F2-E2-M1", 
+#           "_W4-S3-N1-B2-R2-P2-F2-E1-M2", 
+#           "_W4-S3-N1-B2-R2-P2-F2-E1-M3", 
+#           "_W4-S3-N1-B2-R2-P2-F2-E1-M4")
 
-verTag <- paste(verTag, "60", sep="_")
+verTagLocal <- paste(verTag, "NP", sep="_")
 
 
 #### foreach MSA
@@ -204,7 +218,7 @@ var_agg<-c()
 for (m in msaListCntct){
   # load calibrated parameters for this location
   par   <-calibratedPar(m, Generic)
-  
+
   ### msa policy and date
   msaPD <- loadPolicyDates(m)
   
@@ -227,12 +241,12 @@ for (m in msaListCntct){
   # compare results for two MSAs
   if (m_num %% 4 ==0){
     if (m_num<=4){
-      legendMSA <- c("NYC Contact - NYC Population", "Chicago Contact - NYC Population",
-                     "NYC Contact - Chicago Population", "Chicago Contact - Chicago Population")
+      legendMSA <- c("NYC Contact -\nNYC Population", "\nChicago Contact -\nNYC Population\n",
+                     "NYC Contact -\nChicago Population", "\nChicago Contact -\nChicago Population\n")
       small<-0
     }else if (m_num<=8){
-      legendMSA <- c("Sacramento Contact - Sacramento Population", "Kansas City Contact - Sacramento Population",
-                     "Sacramento Contact - Kansas City Population", "Kansas City Contact - Kansas City Population")
+      legendMSA <- c("Sacramento Contact -\nSacramento Population", "\nKansas City Contact -\nSacramento Population\n",
+                     "Sacramento Contact -\nKansas City Population", "\nKansas City Contact -\nKansas City Population\n")
       small<-1
     }else if (m_num<=12){
       legendMSA <- c("NYC Contact - NYC Population", "Kansas City Contact - NYC Population",
@@ -250,7 +264,7 @@ for (m in msaListCntct){
       stop("not coded up figure format")
     }
     
-    fnEnd <- paste('_', m, '_', msaListCntct[m_num-1], verTag, ".png", sep="")
+    fnEnd <- paste('_', m, '_', msaListCntct[m_num-1], verTagLocal, ".pdf", sep="")
     plotSIR2MSA(fnEnd, var_agg, small,legendMSA)
   }
 

@@ -24,6 +24,7 @@ runSir <- function(place, policy, par, simRef){
     # load default parameters and set transmission rate
     vpar<-vparameters0
     vpar["beta"] <- setBeta(contact, par) 
+    print(vpar["beta"])
     
     ### initial condition
     inits<-initialCondition(TTT[j],sim0)

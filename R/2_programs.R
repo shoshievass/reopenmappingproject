@@ -156,7 +156,6 @@ calibratedPar <- function(place, generic=0) {
       beta3<-as.vector(min(pData$beta3))
       beta4<-as.vector(min(pData$beta4))    
     }
-
   }
   return(list(I0=I0,
               beta1=beta1,
@@ -180,7 +179,6 @@ loadData <- function(place,contact) {
   
   # some global variables for types
   globalTypeVectors(types)
-
 
   return(Cmat=Cmat)
 }
@@ -559,12 +557,13 @@ calOutcome<-function(simRun, Demo){
     ## accounting for race and income
     ## first average outcomes across types we want to keep track
     demo_acct <- demo_acct %>% 
-      group_by(age, naics, sick, wfh, employed) %>% 
+      group_by(age, naics, sick, wfh) %>% 
       summarise(death = sum(death*n)/sum(n), 
                 hosp  = sum(hosp*n)/sum(n), 
                 icu   = sum(icu*n)/sum(n), 
                 empLoss = sum(empLoss*n)/sum(n),
                 n = sum(n)) 
+    demo_acct$employed <- 1*(demo_acct$naics>0)
     
     ## merge type specific outcome with demo distribution
     ## not all types exit in contact matrix
@@ -582,7 +581,7 @@ calOutcome<-function(simRun, Demo){
                 empLoss   = sum(pr_type_ineq * empLoss * employed)/sum(pr_type_ineq * employed),
                 age       = sum(pr_type_ineq * raw_age)/sum(pr_type_ineq),
                 essential = sum(pr_type_ineq * essential)/sum(pr_type_ineq),
-                n = sum(n))
+                n = sum(N))
     race_income$pr_race_income <- race_income$n*100/sum(race_income$n)  
     
     ## stack outputs
@@ -648,7 +647,7 @@ plotSIRHealth <- function(fn, sim1,sim2) {
   
   # state to plot
   state2plot<-c("Employment Loss","Infected Symptomatic", "Infected Asymptomatic","Quarantine after Treatment")
-  what2plot<-list(Emp=c("Ihc","Rq","D"), Ihc="Ihc",I=c("Ia","Ins"),Rq="Rq")
+  what2plot<-list(Emp=c("Ihc","Rq","D"), Ihc="Ihc",I=c("Ia"),Rq="Rq")
   colvec<-c(2,1,6,7)
   
   # primary outputs
@@ -824,5 +823,5 @@ gen_col <- function() {
               t_col("blue",    perc = 0),
               t_col("purple",  perc = 0))
   mycolLength<<-7
-  psize<<-1.25
+  psize<<-2
 }

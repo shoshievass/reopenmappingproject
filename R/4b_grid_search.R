@@ -113,6 +113,7 @@ demeanSeries <- function(X0){
 # plot fit in caliration -----------------------------------------------------
 plotCali <- function(fn, xdata, xfit, DC, tVertL) {
   
+
   if(length(xdata)!=length(xfit))  stop("data and predicted series do not have the same length!")
   
   nt<-length(xdata)
@@ -126,7 +127,8 @@ plotCali <- function(fn, xdata, xfit, DC, tVertL) {
   }
   
   ## do we export figure
-  if (fn!="") pdf(fn)
+  if (fn!="") pdf(file.path(outPath, "figure", paste(fn, ".pdf", sep="")), family="Palatino")
+  par(mar=c(2,5,1,1))
   
   ### plot fit
   xdata_finite <- xdata[is.finite(xdata)]
@@ -134,19 +136,40 @@ plotCali <- function(fn, xdata, xfit, DC, tVertL) {
   plot(t, xfit, 
        ylim=c(min(0, min(xdata_finite),min(xfit_finite)), max(max(xdata_finite), max(xfit_finite))), 
        xlab="", ylab=ylbl, 
-       lwd=1.5, xaxt = "n", type="l",col="red", lty=5, cex.lab=psize)
+       lwd=2, xaxt = "n", type="l",col="red", lty=5, cex.lab=psize, cex.axis=0.7*psize)
   # x-axis show dates
-  t2show<-seq(0,max(t),10)
-  axis(side  = 1, at = t2show, label=format(t2show+TNAUGHT, "%m/%d"))
+  t2show<-seq(0,max(t),20)
+  axis(side  = 1, at = t2show, label=format(t2show+TNAUGHT, "%m/%d"), cex.axis=0.7*psize)
   
-  lines(t[1:nt], xdata[1:nt], type="l", lwd=1.5, col="red")
+  lines(t[1:nt], xdata[1:nt], type="l", lwd=2, col="red")
   
   ### indicate key dates
   nline<-length(tVertL)
   lcolors<-c(rep("gray",nline-2),rep("black",2))
   abline(v=tVertL,col=lcolors)
   
+  # report measure of fit
+  tRange <- tVertL[(nline-1)]:tVertL[nline]
+  mse <- mean((xdata[tRange]-xfit[tRange])^2, na.rm=TRUE)
+  mseTxt <- TeX(paste("MSE$= ",format(mse, digits=2, nsmall = 2), "$", sep=""))
+  
+  ## legend
+  legend("bottomright", 
+         legend=c(mseTxt,"Model","Data"),
+         col=c("white","red","red"),
+         lty=c(0,5,1), 
+         horiz=F,lwd=2,bty="n",cex=psize)
+  
   if (fn!="") dev.off()
+  
+  ### export data in a csv
+  if (fn!="") {
+    out <- cbind(t, format(t+TNAUGHT, "%m/%d"), xdata, xfit, t %in% tVertL[1:(nline-2)],t %in% tVertL[(nline-1):nline])
+    colnames(out)<-c("t","date","data", "fit", "phases", "start_end_sample")
+    
+    checkWrite(file.path(outPath, "csv", paste(fn, ".csv", sep="")),
+               out, "calibration data and fit")
+  }
 }
 
 
@@ -338,22 +361,22 @@ gridSearch <- function(m, covid){
   print("grid search done!!")
   print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   
-  
 
-  ### export calibration results and key SEIR outputs as csv
+  # ### export calibration results and key SEIR outputs as csv
   parmOut<-matrix(par_star,1,dim(step)[2])
   colnames(parmOut)<-c("I0",paste("beta",1:(dim(step)[2]-1),sep=""))
   checkWrite(file.path(calibratedParPath, paste(caliParm, m, ".csv", sep="")),
              parmOut, "calibrated parameters")
-
+  print(parmOut)
+  
   ### plot calibration result
-  fn <- file.path(outPath, "figure", paste("calibrate_beta_I0_death_msa", m, ".pdf", sep=""))
+  fn <- paste("calibrate_beta_I0_death_msa", m, sep="")
   plotCali(fn, dead, deadfit, 0, tVertL)
-  print(paste("  saved plot:",fn))
-
-  fn <- file.path(outPath, "figure", paste("calibrate_beta_I0_case_msa", m, ".pdf", sep=""))
+  print(paste("  saved plot:",file.path(outPath, "figure", paste(fn, ".pdf", sep=""))))
+  
+  fn <- paste("calibrate_beta_I0_logcase_msa", m, sep="")
   plotCali(fn, log(case), log(casefit), 1, tVertL)
-  print(paste("  saved plot:",fn))
+  print(paste("  saved plot:",file.path(outPath, "figure", paste(fn, ".pdf", sep=""))))
   
   par(mfrow=c(1,2))
   plotCali("", dead, deadfit, 0, tVertL)

@@ -10,7 +10,7 @@
 #####################################
 ## check packages
 #####################################
-packages <- c("deSolve","plyr","dplyr","tidyr","gtools")
+packages <- c("deSolve","plyr","dplyr","tidyr","gtools","latex2exp")
 newPackages <- packages[!(packages %in% installed.packages()[,"Package"])]
 if(length(newPackages)) install.packages(newPackages)
 
@@ -19,6 +19,7 @@ library(plyr)
 library(dplyr)
 library(tidyr)
 library(gtools)
+library(latex2exp)
 
 
 #####################################
@@ -112,20 +113,21 @@ reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2),
                      c(2,1,1,1,2,1,1,2),
                      c(4,3,1,2,2,2,2,1))
 
+reopenPolicy<<-rbind(c(4,3,3,2,2,2,2,2))
+
 # generate results for multiple reference policies, 
 # this is for area plot in the NBER working paper
 genRef4Area<<-0
 
 # do we run interaction of 'reopenPolicy' across all phases (=1) 
 # or keep first 3 phases as the reference policy and run all possible reopen policies 'contactPolicyPOI' in the last phase (=0)?
-AllPhases<<-0
+AllPhases<<-1
 
 
 ## MSAs
 # NYC, Chicago, Sacramento, Kansas City
 msaList<<-c("5600","1600","6920","3760")
-msaList<<-c("1600")
-
+msaList<<-c("5600")
 
 
 #####################################
@@ -162,12 +164,12 @@ TNAUGHT <<- as.Date(unique("3/5/2020"), "%m/%d/%Y")
 verTag <<-"_combo"
 
 # save detailed seir compartment X type X time level results and plots for internal checking?
-outputSIR<<-1
+outputSIR<<-0
 
-# use estimated or generic beta (default 0, 1 and 2 for the compare MSA exercise only)
+# use estimated or generic beta (default 0, 1 and 2 for the compare MSA exercise)
 # 0: use MSA specific estimated parameter
 # 1: use MSA specific beta and generic initial condition
-# 2: use generic parameters
+# 2: use generic parameters (used in our current draft)
 Generic<<-0
 if (Generic>0){
   verTag <<-paste(verTag,'_par',Generic,sep="")

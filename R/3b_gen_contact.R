@@ -99,7 +99,7 @@ activeEmp <- function(Th, W, E, POI) {
     # AS
     activeW <-Th$essential_i + (Th$essential_i==0) * (0.5+0.5*Th$wfh_i) 
   }else if (W==4|W==2){
-    # WFH or regular, not impact on employment
+    # WFH or regular, no impact on employment
     activeW <-1
   }else{
     stop("Only support W 1-4")
