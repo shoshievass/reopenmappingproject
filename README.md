@@ -14,8 +14,8 @@ Each simulations is described as a tuple containing the following information:
 ## Other parameters
 All simulations share the same $I_0 = 0.15$ and simulate the first $T=100$ days of the epidemic. All remaining disease parameters are as specified in the file `parameter/seir_parameters.csv`. We use three different iterations of the file:
 - one with COVID parameters (pre loaded)
-- one with COVID parameters but we swap the hospitalization and icu probabilities with numbers corresponding to the flue season
-- same as above but divide death in hospital by 10
+- one with COVID parameters but we swap the hospitalization and icu probabilities with numbers corresponding to the flu season (`alternative_parameters`)
+- same as above but divide death in hospital by 10 (in `alternative_parameters`)
 
 ## What simulations do we run?
 The file `SLURM_workload.csv` contains all the vectors identifying the simulations we plan to run. A different workload file can easily be created using the `workload.R` script in the `auxiliary` folder.
@@ -55,3 +55,4 @@ NB: remember to manually set the project folder in `main` and `slurm_func` befor
 -  `build_cmatrixes_swap.m`: using the 16 contact matrices originally produced by Cody in the `original_cmatrices` subfolder, it creates recombines contacts with compositions and size to create the new set of contact matrices. Also it gets rid of extra type so we have 796 types in all msa's.
 - `calibrated_values.xlsx` contains vector of calibrated disease parameters and detailed instructions to replicate the calibration using the code from the master branch.
 - `workload.R` generates the `SLURM_workload.csv` file. Refer to the paragraphs above for its function.
+- `alternative_parameters` contains parameters for the flu and flu with low mortality runs.
